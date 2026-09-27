@@ -31,6 +31,7 @@ const BarberLogin = () => {
     try {
       dispatch(showLoading());
       const response = await axios.post("/api/v1/user/login", formData);
+      console.log(response);
       dispatch(hideLoading());
 
       if (response.data.success) {

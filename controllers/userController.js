@@ -12,10 +12,8 @@ const getJwtSecret = () => {
 
 const loginController = async (req, res) => {
   try {
-    // Extract phone and password from request body
     const { phone, password } = req.body;
     
-    // Validate input
     if (!phone || !password) {
       return res.status(400).send({
         message: "Phone and password are required",
@@ -23,7 +21,6 @@ const loginController = async (req, res) => {
       });
     }
     
-    // Find user by phone
     const user = await userModel.findOne({ phone });
    
     if (!user) {
@@ -33,7 +30,6 @@ const loginController = async (req, res) => {
       });
     }
     
-    // Compare passwords
     const isMatch = bcrypt.compareSync(password, user.password);
     if (!isMatch) {
       return res.status(200).send({
@@ -42,9 +38,14 @@ const loginController = async (req, res) => {
       });
     }
     
-    // Create safe user object (without password)
-    const { name, phone: userPhone, role } = user;
-    const safeUser = { name, phone: userPhone, role };
+    // Standardized user payload containing both _id and id
+    const safeUser = {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+    };
 
     let secretKey;
     try {
@@ -65,6 +66,7 @@ const loginController = async (req, res) => {
 
     res.status(200).send({
       user: safeUser,
+      data: safeUser,
       message: "Login successful",
       success: true,
       token
@@ -81,7 +83,6 @@ const loginController = async (req, res) => {
 
 const registerController = async (req, res) => {
   try {
-    // Validate required fields
     if (!req.body.phone || !req.body.password || !req.body.name || !req.body.role) {
       return res.status(400).send({
         message: "All fields (name, phone, password, role) are required",
@@ -89,7 +90,6 @@ const registerController = async (req, res) => {
       });
     }
 
-    // Check if user already exists
     const existingUser = await userModel.findOne({ phone: req.body.phone });
 
     if (existingUser) {
@@ -99,17 +99,22 @@ const registerController = async (req, res) => {
       });
     }
 
-    // Hash password
     const password = req.body.password;
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
     req.body.password = hash;
 
-    // Create and save new user
     const newUser = new userModel(req.body);
     await newUser.save();
 
-    // Generate JWT token
+    const safeUser = {
+      _id: newUser._id,
+      id: newUser._id,
+      name: newUser.name,
+      phone: newUser.phone,
+      role: newUser.role
+    };
+
     const token = jwt.sign(
       { userId: newUser._id, phone: newUser.phone },
       process.env.SECRET_KEY,
@@ -120,11 +125,8 @@ const registerController = async (req, res) => {
       message: "Register successful",
       success: true,
       token,
-      user: {
-        name: newUser.name,
-        phone: newUser.phone,
-        role: newUser.role
-      }
+      user: safeUser,
+      data: safeUser
     });
 
   } catch (error) {
@@ -138,10 +140,7 @@ const registerController = async (req, res) => {
 
 const authController = async (req, res) => {
   try {
-    console.log('Auth controller - userId:', req.body.userId);
     const userId = req.body.userId;
-    
-    // Find user by ID
     const user = await userModel.findById(userId);
     
     if (!user) {        
@@ -151,15 +150,19 @@ const authController = async (req, res) => {
       });
     } 
     
+    const safeUser = {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+    };
+
     res.status(200).send({
       message: "User data fetched successfully",
       success: true,
-      data: {
-        name: user.name,
-        phone: user.phone,
-        role: user.role,
-        id: user._id
-      }
+      data: safeUser,
+      user: safeUser
     });
   } catch (error) {
     res.status(500).send({        
@@ -170,8 +173,66 @@ const authController = async (req, res) => {
   }   
 };
 
+const handleProfileEdit = async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const { id } = req.params;
+
+    if (!name || !phone) {
+      return res.status(400).send({
+        message: "Name and phone are required",
+        success: false,
+      });
+    }
+
+    const existingPhoneUser = await userModel.findOne({ phone, _id: { $ne: id } });
+    if (existingPhoneUser) {
+      return res.status(400).send({
+        message: "Phone number is already registered to another user",
+        success: false,
+      });
+    }
+    
+    const updatedUser = await userModel.findByIdAndUpdate(
+      id,
+      { name, phone },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).send({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    const safeUser = {
+      _id: updatedUser._id,
+      id: updatedUser._id,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      role: updatedUser.role,
+    };
+
+    return res.status(200).send({
+      message: "Profile updated successfully",
+      success: true,
+      user: safeUser,
+      data: safeUser
+    });
+  } catch (error) {
+    console.error("Error in handleProfileEdit:", error);
+    return res.status(500).send({
+      message: "Error updating profile",
+      error: error.message,
+      success: false,
+    });
+  }
+};
+
 module.exports = {
   loginController,
   registerController,
-  authController
+  authController,
+  handleProfileEdit
 };

@@ -1,26 +1,29 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import axios from 'axios';
 import Booking from '../components/Booking';
 import Button from '../components/Button';
+import WaitingList from '../components/WaitingList';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Container } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../redux/features/authSlice';
 import { toggleBooking, hideBooking } from '../redux/features/bookingSlice';
 import { showLoading, hideLoading } from '../redux/features/alertSlice';
-import WaitingList from '../components/WaitingList';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ListAltIcon from '@mui/icons-material/ListAlt';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 const Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
-  const { isVisible } = useSelector(state => state.booking);
+  const waitingListRef = useRef(null);
+
+  const { user } = useSelector((state) => state.auth);
+  const { isVisible } = useSelector((state) => state.booking);
 
   const getUserData = async () => {
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       navigate('/barber/login');
       return;
@@ -33,15 +36,17 @@ const Home = () => {
         {},
         {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
       if (response.data.success) {
-        dispatch(setUser({ 
-          user: response.data.data 
-        }));
+        dispatch(
+          setUser({
+            user: response.data.data,
+          })
+        );
       } else {
         localStorage.removeItem('token');
         navigate('/barber/login');
@@ -69,85 +74,144 @@ const Home = () => {
     };
   }, [dispatch]);
 
+  const handleScrollToWaitingList = () => {
+    waitingListRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <Box sx={{ 
-      minHeight: 'calc(100vh - 64px)',
-      py: { xs: 3, sm: 4, md: 6 },
-      px: { xs: 2, sm: 3, md: 4 },
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      maxWidth: '1200px',
-      mx: 'auto',
-    }}>
-      {isVisible ? (
-        <Booking />
-      ) : (
-        <>
-          {/* Welcome Header */}
-          <Box sx={{
-            mb: { xs: 4, md: 5 },
-            textAlign: 'center',
-            width: '100%',
-          }}>
-            <Typography
-              sx={{
-                fontSize: { xs: '28px', sm: '36px', md: '48px' },
-                lineHeight: { xs: '36px', sm: '44px', md: '56px' },
-                fontWeight: 700,
-                color: '#1B263B',
-                mb: 1,
-              }}
-            >
-              Welcome{user?.name ? `, ${user.name}` : ''}!
-            </Typography>
+    <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: '#F8FAFC' }}>
+      {/* Hero Section */}
+      <Box
+        sx={{
+          minHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          px: { xs: 2, sm: 3, md: 4 },
+          py: 6,
+          maxWidth: '1200px',
+          mx: 'auto',
+          position: 'relative',
+        }}
+      >
+        {isVisible ? (
+          <Booking />
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              textAlign: 'center',
+            }}
+          >
+            {/* Header Content */}
+            <Box sx={{ mb: 4, maxWidth: '800px' }}>
+              <Typography
+                sx={{
+                  fontSize: { xs: '46px', sm: '62px', md: '74px' },
+                  lineHeight: { xs: '44px', sm: '60px', md: '72px' },
+                  fontWeight: 300,
+                  color: '#0F172A',
+                  letterSpacing: '-0.02em',
+                  mb: 1.5,
+                }}
+              >
+                Welcome{user?.name ? `, ${user.name}` : ''}
+              </Typography>
 
-            <Typography
+              <Typography
+                sx={{
+                  fontSize: { xs: '15px', sm: '18px' },
+                  lineHeight: { xs: '22px', sm: '28px' },
+                  fontWeight: 400,
+                  color: '#475569',
+                  maxWidth: '560px',
+                  mx: 'auto',
+                }}
+              >
+                {user?.role === 'user'
+                  ? 'Book your appointment in seconds. Select your preferred service.'
+                  : 'Manage daily schedules, barber queues, and client appointments.'}
+              </Typography>
+            </Box>
+
+            {/* Action CTA & Scroll Indicator Container */}
+            <Box
               sx={{
-                fontSize: { xs: '16px', md: '18px' },
-                lineHeight: { xs: '24px', md: '28px' },
-                fontWeight: 400,
-                color: '#6B7280',
-                maxWidth: '600px',
-                mx: 'auto',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 2.5,
               }}
             >
-              {user?.role === "user"
-                ? "Book your appointment. Select a service with preferred time."
-                : "Manage your schedule and view upcoming appointments."}
-            </Typography>
+              {user?.role === 'user' ? (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={() => dispatch(toggleBooking())}
+                  className="w-full max-w-[320px] gap-2 shadow-sm hover:shadow transition-all"
+                >
+                  <CalendarTodayIcon className="!text-[18px]" />
+                  Book an Appointment
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => navigate('/barber/dashboard')}
+                  className="w-full max-w-[320px] gap-2 shadow-sm hover:shadow transition-all"
+                >
+                  <ListAltIcon className="!text-[18px]" />
+                  Manage Bookings
+                </Button>
+              )}
+
+              {/* Scroll Trigger: "View live list" */}
+              <Box
+                onClick={handleScrollToWaitingList}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  cursor: 'pointer',
+                  color: '#64748B',
+                  transition: 'all 0.2s ease',
+                  userSelect: 'none',
+                  '&:hover': {
+                    color: '#0F172A',
+                    transform: 'translateY(2px)',
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    letterSpacing: '0.01em',
+                  }}
+                >
+                  View waiting list
+                </Typography>
+                <KeyboardArrowDownIcon sx={{ fontSize: 20 }} />
+              </Box>
+            </Box>
           </Box>
+        )}
+      </Box>
 
-      {/* Conditional Action Button */}
-<div className="w-full flex justify-center mb-8">
-  {user?.role === 'user' ? (
-    <Button
-      variant="primary"
-      size="lg"
-      onClick={() => dispatch(toggleBooking())}
-      className="w-full max-w-[400px] gap-2"
-    >
-      <CalendarTodayIcon className="!text-[20px]" />
-      Book an Appointment
-    </Button>
-  ) : (
-    <Button
-      variant="secondary"
-      size="lg"
-      onClick={() => navigate('/barber/dashboard')} // adjust route as needed
-      className="w-full max-w-[400px] gap-2"
-    >
-      <ListAltIcon className="!text-[20px]" />
-      Manage Bookings
-    </Button>
-  )}
-</div>
-
-<WaitingList />
-
-
-        </>
-      )}
+      {/* Live Queue / Waiting List Section */}
+      <Container
+        ref={waitingListRef}
+        maxWidth="lg"
+        sx={{ pb: { xs: 8, md: 10 }, px: { xs: 2, sm: 3 } }}
+      >
+        <WaitingList />
+      </Container>
     </Box>
   );
 };

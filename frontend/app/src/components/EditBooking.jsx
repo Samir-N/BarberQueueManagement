@@ -1,34 +1,31 @@
 import {
   Box,
   Typography,
-  Button,
   TextField,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Grid,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Stack,
 } from "@mui/material";
+import Button from "./Button";
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
 import dayjs from "dayjs";
 import TimeManager from "./TimeManager";
-import { insertPersonalBooking } from "../redux/features/bookingSlice";
+import { insertPersonalBooking, hideBooking } from "../redux/features/bookingSlice";
 import { showLoading, hideLoading } from "../redux/features/alertSlice";
-import { showBooking, hideBooking } from "../redux/features/bookingSlice";
-
 
 const EditBooking = () => {
   const { personalBooking } = useSelector((state) => state.booking);
   const { services } = useSelector((state) => state.service);
   const dispatch = useDispatch();
-
 
   const [formData, setFormData] = useState({
     serviceId: personalBooking?.service?._id || "",
@@ -103,7 +100,6 @@ const EditBooking = () => {
       );
 
       if (response.data.success) {
-        // Refresh the booking data
         const res = await axios.post(
           "/api/v1/user/personalBookings",
           {},
@@ -115,6 +111,7 @@ const EditBooking = () => {
           dispatch(insertPersonalBooking(res.data.data));
         }
         alert("Booking updated successfully!");
+        dispatch(hideBooking());
       } else {
         alert("Failed to update booking!");
       }
@@ -129,12 +126,12 @@ const EditBooking = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setOpenConfirm(true); // Open confirmation dialog
+    setOpenConfirm(true);
   };
 
   const handleCancel = () => {
     dispatch(hideBooking());
-  }
+  };
 
   return (
     <Box sx={{ mx: "auto", maxWidth: 600 }}>
@@ -184,19 +181,15 @@ const EditBooking = () => {
           <TimeManager onTimeSelect={handleTimeSelect} />
         </Box>
 
-        {/* Buttons */}
-        <Grid container spacing={2} mt={3}>
-          <Grid item xs={6}>
-            <Button type="submit" variant="contained" fullWidth>
-              Save
-            </Button>
-          </Grid>
-          <Grid item xs={6}>
-            <Button variant="outlined" onClick={handleCancel}fullWidth>
-              Cancel
-            </Button>
-          </Grid>
-        </Grid>
+        {/* Action Buttons */}
+        <Stack direction="row" spacing={2} sx={{ mt: 3, width: "100%" }}>
+          <Button type="submit" variant="primary" sx={{ flex: 1 }}>
+            Save
+          </Button>
+          <Button variant="tertiary" onClick={handleCancel} sx={{ flex: 1 }}>
+            Cancel
+          </Button>
+        </Stack>
       </form>
 
       {/* Confirmation Dialog */}
@@ -207,9 +200,11 @@ const EditBooking = () => {
             Are you sure you want to update this booking?
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenConfirm(false)}>No</Button>
-          <Button onClick={handleSave} autoFocus>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button variant="danger" size="sm" onClick={() => setOpenConfirm(false)} sx={{ flex: 1 }}>
+            No
+          </Button>
+          <Button variant="success" size="sm" onClick={handleSave} sx={{ flex: 1 }}>
             Yes
           </Button>
         </DialogActions>

@@ -9,7 +9,8 @@ const servicesController = require('../controllers/serviceController');
 const { 
   loginController, 
   registerController, 
-  authController 
+  authController,
+  handleProfileEdit 
 } = require('../controllers/userController');
 
 const { 
@@ -35,8 +36,12 @@ router.get('/getBookings', bookingsFetchController);
 router.post('/personalBookings', authMiddleware, personalBookingFetchController);
 
 // --- Booking Management Routes ---
-router.post('/admin/booking/:id/status',handleStatusController);
+router.post('/admin/booking/:id/status',handleStatusController,authMiddleware);
 router.put('/personalBooking/edit/:id', authMiddleware, editBookingController);
 router.delete('/personalBooking/delete/:id', authMiddleware, deleteBookingController);
+
+// --- Profile Management Routes ---
+router.post('/profile/edit/:id',authMiddleware,handleProfileEdit);
+
 
 module.exports = router;
