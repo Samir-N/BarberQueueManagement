@@ -197,7 +197,7 @@ const handleProfileEdit = async (req, res) => {
       id,
       { name, phone },
       { new: true, runValidators: true }
-    ).select("-password");
+    );
 
     if (!updatedUser) {
       return res.status(404).send({
