@@ -58,6 +58,8 @@ const Booking = () => {
       dispatch(showAlert({ message: 'Booking Successful!', type: 'success' }));
       setFormData({ service: "", time: dayjs() });
       setActiveStep(0);
+      window.location.reload();
+
     } catch (error) {
       dispatch(hideLoading());
       dispatch(showAlert({ message: 'Booking Failed!', type: 'error' }));

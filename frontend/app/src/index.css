@@ -63,6 +63,11 @@
   --breakpoint-xl: 1920px;
 }
 
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
 /* Reset & Base Styles */
 * {
   margin: 0;
@@ -74,6 +79,10 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-y: auto; /* Keeps vertical scrolling active */
+  scrollbar-width: none; /* Hides scrollbar in Firefox */
+  -ms-overflow-style: none; /* Hides scrollbar in IE/Edge */
+
 }
 
 body {

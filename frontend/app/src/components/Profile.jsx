@@ -62,58 +62,68 @@ const Profile = ({ onEdit }) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  
-const handleSave = async () => {
-  const userId = user?._id || user?.id;
+  const handleSave = async () => {
+    const userId = user?._id || user?.id;
 
-  if (!userId) {
-    alert("User ID missing. Please re-login.");
-    return;
-  }
-
-  const cleanName = String(formData.name || "").trim();
-  const cleanPhone = String(formData.phone || "").trim();
-
-  if (!cleanName || !cleanPhone) {
-    alert("Name and Phone fields cannot be empty.");
-    return;
-  }
-
-  try {
-    dispatch(showLoading());
-    const token = localStorage.getItem("token");
-
-    const response = await axios.post(
-      `/api/v1/user/profile/edit/${userId}`,
-      { name: cleanName, phone: cleanPhone },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    if (response.data.success) {
-      const returnedUser = response.data.user || response.data.data;
-
-      // Merge old state with returned data to prevent setting undefined values
-      const updatedState = {
-        ...user,
-        ...returnedUser,
-        name: cleanName,
-        phone: cleanPhone,
-      };
-
-      dispatch(setUser(updatedState));
-      alert("Profile updated successfully!");
-      window.location.reload();
-      setOpen(false);
-    } else {
-      alert(response.data.message || "Failed to update profile.");
+    if (!userId) {
+      alert("User ID missing. Please re-login.");
+      return;
     }
-  } catch (err) {
-    console.error("Error updating profile:", err);
-    alert(err.response?.data?.message || "Failed to update profile!");
-  } finally {
-    dispatch(hideLoading());
-  }
-};
+
+    const cleanName = String(formData.name || "").trim();
+    const cleanPhone = String(formData.phone || "").trim();
+
+    if (!cleanName || !cleanPhone) {
+      alert("Name and Phone fields cannot be empty.");
+      return;
+    }
+
+    // --- Added Validation Checks ---
+    if (cleanName.length > 40) {
+      alert("Name cannot be more than 40 characters.");
+      return;
+    }
+
+    if (cleanPhone.length !== 10) {
+      alert("Phone number must be exactly 10 digits.");
+      return;
+    }
+
+    try {
+      dispatch(showLoading());
+      const token = localStorage.getItem("token");
+
+      const response = await axios.post(
+        `/api/v1/user/profile/edit/${userId}`,
+        { name: cleanName, phone: cleanPhone },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        const returnedUser = response.data.user || response.data.data;
+
+        // Merge old state with returned data to prevent setting undefined values
+        const updatedState = {
+          ...user,
+          ...returnedUser,
+          name: cleanName,
+          phone: cleanPhone,
+        };
+
+        dispatch(setUser(updatedState));
+        alert("Profile updated successfully!");
+        window.location.reload();
+        setOpen(false);
+      } else {
+        alert(response.data.message || "Failed to update profile.");
+      }
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      alert(err.response?.data?.message || "Failed to update profile!");
+    } finally {
+      dispatch(hideLoading());
+    }
+  };
 
   return (
     <>
@@ -248,6 +258,8 @@ const handleSave = async () => {
             onChange={handleChange}
             fullWidth
             size="small"
+            inputProps={{ maxLength: 40 }}
+            helperText={`${formData.name.length}/40 characters`}
           />
           <TextField
             label="Phone"
@@ -256,6 +268,8 @@ const handleSave = async () => {
             onChange={handleChange}
             fullWidth
             size="small"
+            inputProps={{ maxLength: 10 }}
+            helperText="Must be exactly 10 digits"
           />
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>

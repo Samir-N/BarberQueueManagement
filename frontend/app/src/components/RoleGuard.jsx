@@ -1,11 +1,13 @@
 import { useSelector } from "react-redux";
 
 // 1. Core Guard Component
-export const RoleGuard = ({ allow = [], children, fallback = null }) => {
-  // Adjust 'state.auth' if your Redux slice key is named differently
+export const RoleGuard = ({ allow, allowedRoles, children, fallback = null }) => {
   const { user } = useSelector((state) => state.auth);
+  
+  // Support both 'allowedRoles' and 'allow'
+  const roles = allowedRoles || allow || [];
 
-  if (!user || !allow.includes(user.role)) {
+  if (!user || !roles.includes(user?.role)) {
     return fallback;
   }
 

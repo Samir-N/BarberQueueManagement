@@ -128,9 +128,9 @@ const WaitingList = () => {
         <Box
           sx={{
             display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
+            flexDirection: { xs: "column", md: "row" },
             justifyContent: "space-between",
-            alignItems: { xs: "stretch", sm: "center" },
+            alignItems: { xs: "stretch", md: "center" },
             gap: 2,
           }}
         >
@@ -138,7 +138,12 @@ const WaitingList = () => {
             Waiting List
           </Typography>
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="center">
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1.5}
+            alignItems="center"
+            sx={{ flexWrap: "wrap", width: { xs: "100%", md: "auto" } }}
+          >
             <TextField
               size="small"
               placeholder="Search User ID, name..."
@@ -152,7 +157,7 @@ const WaitingList = () => {
                 ),
               }}
               sx={{
-                width: { xs: "100%", sm: 280 },
+                width: { xs: "100%", sm: 240, md: 280 },
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
                   backgroundColor: "#FFFFFF",
@@ -213,8 +218,14 @@ const WaitingList = () => {
       >
         {filteredBookings.length > 0 ? (
           <>
-            {/* Mobile View */}
-            <Box sx={{ display: { xs: "flex", sm: "none" }, flexDirection: "column", gap: 2 }}>
+            {/* Mobile & Tablet Card View (< 900px) */}
+            <Box
+              sx={{
+                display: { xs: "grid", md: "none" },
+                gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
+                gap: 2,
+              }}
+            >
               {filteredBookings.map((b, index) => {
                 const statusInfo = getStatus(b.status);
                 const isPending = !b.status || b.status.toLowerCase() === "pending";
@@ -230,6 +241,7 @@ const WaitingList = () => {
                       border: "1px solid #E5E7EB",
                       display: "flex",
                       flexDirection: "column",
+                      justifyContent: "space-between",
                       gap: 1.5,
                     }}
                   >
@@ -293,7 +305,7 @@ const WaitingList = () => {
                             disableElevation
                             startIcon={<CheckCircleIcon />}
                             onClick={() => handleStatusChange(b._id, "conformed")}
-                            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5 }}
+                            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5, flex: { xs: 1, sm: "initial" } }}
                           >
                             Confirm
                           </Button>
@@ -303,7 +315,7 @@ const WaitingList = () => {
                             size="small"
                             startIcon={<CancelIcon />}
                             onClick={() => handleStatusChange(b._id, "cancelled")}
-                            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5 }}
+                            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5, flex: { xs: 1, sm: "initial" } }}
                           >
                             Cancel
                           </Button>
@@ -315,26 +327,28 @@ const WaitingList = () => {
               })}
             </Box>
 
-            {/* Desktop Table View */}
+            {/* Desktop Table View (>= 900px) */}
             <TableContainer
               sx={{
-                display: { xs: "none", sm: "block" },
+                display: { xs: "none", md: "block" },
                 borderRadius: 1.5,
                 border: "1px solid #E5E7EB",
+                overflowX: "auto",
+                maxWidth: "100%",
               }}
             >
-              <Table>
+              <Table sx={{ minWidth: 750 }}>
                 <TableHead sx={{ backgroundColor: "#F9FAFB" }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>User ID</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>User Name</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Booking Date & Time</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="center">
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>User ID</TableCell>
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>User Name</TableCell>
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Service</TableCell>
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Booking Date & Time</TableCell>
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }} align="center">
                       Status
                     </TableCell>
                     {isAdmin && (
-                      <TableCell sx={{ fontWeight: 700 }} align="center">
+                      <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }} align="center">
                         Actions
                       </TableCell>
                     )}
@@ -353,7 +367,7 @@ const WaitingList = () => {
                         </TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>{b.userId?.name || "N/A"}</TableCell>
                         <TableCell>{b.service?.serviceName || "N/A"}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
                           {b.bookingTime ? dayjs(b.bookingTime).format("DD MMM YYYY, hh:mm A") : "N/A"}
                         </TableCell>
                         <TableCell align="center">
@@ -380,7 +394,7 @@ const WaitingList = () => {
                                   disableElevation
                                   startIcon={<CheckCircleIcon />}
                                   onClick={() => handleStatusChange(b._id, "conformed")}
-                                  sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5 }}
+                                  sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5, whiteSpace: "nowrap" }}
                                 >
                                   Confirm
                                 </Button>
@@ -390,7 +404,7 @@ const WaitingList = () => {
                                   size="small"
                                   startIcon={<CancelIcon />}
                                   onClick={() => handleStatusChange(b._id, "cancelled")}
-                                  sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5 }}
+                                  sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5, whiteSpace: "nowrap" }}
                                 >
                                   Cancel
                                 </Button>

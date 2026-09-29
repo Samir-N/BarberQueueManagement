@@ -184,6 +184,12 @@ const handleProfileEdit = async (req, res) => {
         success: false,
       });
     }
+    if (phone.length !== 10) {
+  return res.status(400).send({
+    message: "Phone number must be exactly 10 digits",
+    success: false,
+  });
+}
 
     const existingPhoneUser = await userModel.findOne({ phone, _id: { $ne: id } });
     if (existingPhoneUser) {
