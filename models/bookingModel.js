@@ -1,35 +1,41 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const bookingSchema = new mongoose.Schema({
-
-
+const bookingSchema = new mongoose.Schema(
+  {
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
 
     service: {
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Service',
-    required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service",
+      required: true,
     },
 
     bookingTime: {
       type: Date,
-      required: true
+      required: true,
     },
-    
-    status:{
-        type: String,
-        enum: ["pending","conformed","cancelled"],
-        default: "pending"
-    }
 
-}
-,
-{timestamps: true});
+    // DELETE THIS BOOKING AUTOMATICALLY AFTER expiresAt
+    expiresAt: {
+      type: Date,
+      index: {
+        expireAfterSeconds: 0,
+      },
+    },
 
-const bookingModel = mongoose.model('Booking', bookingSchema);
+    status: {
+      type: String,
+      enum: ["pending", "confirmed", "cancelled"],
+      default: "pending",
+    },
+  },
+  { timestamps: true }
+);
+
+const bookingModel = mongoose.model("Booking", bookingSchema);
 
 module.exports = bookingModel;

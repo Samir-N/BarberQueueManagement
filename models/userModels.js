@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'barber','admin'],
     default: 'user',
     required: [true, "Please provide a role"]
 
@@ -25,7 +25,14 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
-  }
+  },
+  publicId: {
+  type: String,
+  required: true,
+  unique: true,
+  uppercase: true,
+  trim: true,
+}
 });
 
 const userModel = mongoose.model('User', userSchema);

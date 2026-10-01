@@ -19,9 +19,11 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useTheme } from '@mui/material/styles';
 import TimeManager from '../components/TimeManager.jsx';
+import { useNavigate } from "react-router-dom";
 
 
 const Booking = () => {
+  const navigate = useNavigate();
   const { user } = useSelector(state => state.auth);
   const { services, loading: servicesLoading } = useSelector(state => state.service);
   const dispatch = useDispatch();
@@ -58,7 +60,8 @@ const Booking = () => {
       dispatch(showAlert({ message: 'Booking Successful!', type: 'success' }));
       setFormData({ service: "", time: dayjs() });
       setActiveStep(0);
-      window.location.reload();
+      navigate('/user/dashboard');
+
 
     } catch (error) {
       dispatch(hideLoading());
@@ -352,171 +355,196 @@ const Booking = () => {
 
         {/* Step 3: Review & Confirm */}
         {activeStep === 2 && selectedService && (
-          <Card sx={{ 
-            p: { xs: 3, sm: 4 },
-            borderRadius: '12px',
-            border: '1px solid #E5E7EB',
-            boxShadow: '0 4px 12px rgba(27, 38, 59, 0.08)',
-            backgroundColor: '#FFFFFF',
-          }}>
-            <Typography sx={{ 
-              mb: 4,
-              fontSize: { xs: '24px', sm: '28px' },
-              lineHeight: { xs: '32px', sm: '36px' },
+          <Card
+  sx={{
+    maxWidth: 880,
+    p: { xs: 2.5, sm: 3.5 },
+    borderRadius: '12px',
+    border: '1px solid #E5E7EB',
+    boxShadow: '0 4px 12px rgba(27, 38, 59, 0.08)',
+    backgroundColor: '#FFFFFF',
+  }}
+>
+  <Typography
+    sx={{
+      mb: 3,
+      fontSize: { xs: '22px', sm: '24px' },
+      lineHeight: { xs: '28px', sm: '32px' },
+      fontWeight: 600,
+      color: '#1B263B',
+    }}
+  >
+    Confirm Booking
+  </Typography>
+
+  <Box
+    sx={{
+      mb: 3,
+      p: { xs: 2.5, sm: 3 },
+      backgroundColor: '#F9F9F6',
+      borderRadius: '12px',
+      border: '1px solid #E5E7EB',
+    }}
+  >
+    <Stack spacing={2.5}>
+      <Box>
+        <Typography
+          sx={{
+            fontSize: '11px',
+            fontWeight: 600,
+            color: '#6B7280',
+            mb: 0.5,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
+          Service
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: { xs: '18px', sm: '20px' },
+            lineHeight: { xs: '24px', sm: '28px' },
+            fontWeight: 600,
+            color: '#1B263B',
+          }}
+        >
+          {selectedService.serviceName}
+        </Typography>
+      </Box>
+
+      <Box sx={{ height: '1px', backgroundColor: '#E5E7EB' }} />
+
+      <Box>
+        <Typography
+          sx={{
+            fontSize: '11px',
+            fontWeight: 600,
+            color: '#6B7280',
+            mb: 0.5,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
+          Total Amount
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: { xs: '32px', sm: '38px' },
+            fontWeight: 700,
+            color: '#1B263B',
+            lineHeight: 1,
+          }}
+        >
+          Rs. {selectedService.price}
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 2,
+        }}
+      >
+        <Box>
+          <Typography
+            sx={{
+              fontSize: '11px',
               fontWeight: 600,
-              color: '#1B263B'
-            }}>
-              Confirm Booking
-            </Typography>
+              color: '#6B7280',
+              mb: 0.5,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Duration
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '16px',
+              lineHeight: '22px',
+              fontWeight: 600,
+              color: '#1B263B',
+            }}
+          >
+            {selectedService.duration} min
+          </Typography>
+        </Box>
+        <Box>
+          <Typography
+            sx={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: '#6B7280',
+              mb: 0.5,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Time
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '16px',
+              lineHeight: '22px',
+              fontWeight: 600,
+              color: '#1B263B',
+            }}
+          >
+            {formData.time.format('hh:mm A')}
+          </Typography>
+        </Box>
+      </Box>
+    </Stack>
+  </Box>
 
-            <Box sx={{ 
-              mb: 4, 
-              p: { xs: 3, sm: 4 }, 
-              backgroundColor: '#F9F9F6',
-              borderRadius: '12px',
-              border: '2px solid #E5E7EB'
-            }}>
-              <Stack spacing={3}>
-                <Box>
-                  <Typography sx={{ 
-                    fontSize: '12px', 
-                    fontWeight: 600, 
-                    color: '#6B7280', 
-                    mb: 1,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}>
-                    Service
-                  </Typography>
-                  <Typography sx={{ 
-                    fontSize: { xs: '20px', sm: '24px' },
-                    lineHeight: { xs: '28px', sm: '32px' },
-                    fontWeight: 600, 
-                    color: '#1B263B' 
-                  }}>
-                    {selectedService.serviceName}
-                  </Typography>
-                </Box>
-
-                <Box sx={{ height: '1px', backgroundColor: '#E5E7EB' }} />
-
-                <Box>
-                  <Typography sx={{ 
-                    fontSize: '12px', 
-                    fontWeight: 600, 
-                    color: '#6B7280', 
-                    mb: 1,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}>
-                    Total Amount
-                  </Typography>
-                  <Typography sx={{ 
-                    fontSize: { xs: '36px', sm: '48px' },
-                    fontWeight: 700,
-                    color: '#1B263B',
-                    lineHeight: 1
-                  }}>
-                    Rs. {selectedService.price}
-                  </Typography>
-                </Box>
-
-                <Box sx={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
-                  gap: 3 
-                }}>
-                  <Box>
-                    <Typography sx={{ 
-                      fontSize: '12px', 
-                      fontWeight: 600, 
-                      color: '#6B7280', 
-                      mb: 1,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                    }}>
-                      Duration
-                    </Typography>
-                    <Typography sx={{ 
-                      fontSize: '18px',
-                      lineHeight: '24px',
-                      fontWeight: 600, 
-                      color: '#1B263B' 
-                    }}>
-                      {selectedService.duration} min
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography sx={{ 
-                      fontSize: '12px', 
-                      fontWeight: 600, 
-                      color: '#6B7280', 
-                      mb: 1,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                    }}>
-                      Time
-                    </Typography>
-                    <Typography sx={{ 
-                      fontSize: '18px',
-                      lineHeight: '24px',
-                      fontWeight: 600, 
-                      color: '#1B263B' 
-                    }}>
-                      {formData.time.format('hh:mm A')}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Stack>
-            </Box>
-
-            <Stack spacing={2}>
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={handleSubmit}
-                sx={{ 
-                  py: 1.75,
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  borderRadius: '8px',
-                  backgroundColor: '#FFC300',
-                  color: '#222222',
-                  minHeight: '48px',
-                  boxShadow: '0 4px 12px rgba(255, 195, 0, 0.3)',
-                  '&:hover': {
-                    backgroundColor: '#E6B000',
-                    boxShadow: '0 6px 16px rgba(255, 195, 0, 0.4)',
-                  }
-                }}
-              >
-                Confirm Booking
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => setActiveStep(1)}
-                sx={{ 
-                  py: 1.5,
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  borderRadius: '8px',
-                  color: '#1B263B',
-                  borderColor: '#415A77',
-                  minHeight: '48px',
-                  '&:hover': {
-                    borderColor: '#1B263B',
-                    backgroundColor: '#F9F9F6',
-                  }
-                }}
-              >
-                <ArrowBackIcon sx={{ mr: 1, fontSize: '20px' }} />
-                Back
-              </Button>
-            </Stack>
-          </Card>
+  <Stack spacing={1.5}>
+    <Button
+      fullWidth
+      variant="contained"
+      onClick={handleSubmit}
+      sx={{
+        py: 1.5,
+        fontSize: '15px',
+        fontWeight: 600,
+        textTransform: 'none',
+        borderRadius: '8px',
+        backgroundColor: '#FFC300',
+        color: '#222222',
+        minHeight: '44px',
+        boxShadow: '0 4px 12px rgba(255, 195, 0, 0.3)',
+        '&:hover': {
+          backgroundColor: '#E6B000',
+          boxShadow: '0 6px 16px rgba(255, 195, 0, 0.4)',
+        },
+      }}
+    >
+      Confirm Booking
+    </Button>
+    <Button
+      fullWidth
+      variant="outlined"
+      onClick={() => setActiveStep(1)}
+      sx={{
+        py: 1.25,
+        fontSize: '15px',
+        fontWeight: 600,
+        textTransform: 'none',
+        borderRadius: '8px',
+        color: '#1B263B',
+        borderColor: '#415A77',
+        minHeight: '44px',
+        '&:hover': {
+          borderColor: '#1B263B',
+          backgroundColor: '#F9F9F6',
+        },
+      }}
+    >
+      <ArrowBackIcon sx={{ mr: 1, fontSize: '18px' }} />
+      Back
+    </Button>
+  </Stack>
+</Card>
         )}
       </Box>
     </Box>

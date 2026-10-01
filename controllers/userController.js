@@ -1,6 +1,7 @@
 const userModel = require('../models/userModels.js');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto'); // Fixed: Added missing import
 
 const getJwtSecret = () => {
   const secret = process.env.SECRET_KEY;
@@ -8,6 +9,15 @@ const getJwtSecret = () => {
     throw new Error('SECRET_KEY is not configured in environment variables');
   }
   return secret;
+};
+
+// Public ID generator
+const generatePublicId = (length = 5) => {
+  const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const bytes = new Uint8Array(length);
+  crypto.webcrypto.getRandomValues(bytes);
+
+  return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
 };
 
 const loginController = async (req, res) => {
@@ -22,7 +32,6 @@ const loginController = async (req, res) => {
     }
     
     const user = await userModel.findOne({ phone });
-   
     if (!user) {
       return res.status(200).send({
         message: "User not found",
@@ -30,7 +39,8 @@ const loginController = async (req, res) => {
       });
     }
     
-    const isMatch = bcrypt.compareSync(password, user.password);
+    // Async compare prevents blocking the Node event loop
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(200).send({
         message: "Invalid Phone or Password",
@@ -38,26 +48,16 @@ const loginController = async (req, res) => {
       });
     }
     
-    // Standardized user payload containing both _id and id
     const safeUser = {
       _id: user._id,
       id: user._id,
+      publicId: user.publicId,
       name: user.name,
       phone: user.phone,
       role: user.role,
     };
 
-    let secretKey;
-    try {
-      secretKey = getJwtSecret();
-    } catch (secretError) {
-      console.error('Login controller - SECRET_KEY validation failed:', secretError.message);
-      return res.status(500).send({
-        success: false,
-        message: 'Server configuration error',
-      });
-    }
-
+    const secretKey = getJwtSecret();
     const token = jwt.sign(
       { userId: user._id, phone: user.phone },
       secretKey,
@@ -83,15 +83,28 @@ const loginController = async (req, res) => {
 
 const registerController = async (req, res) => {
   try {
-    if (!req.body.phone || !req.body.password || !req.body.name || !req.body.role) {
+    const { name, phone, password, role, barberSecretKey} = req.body;
+
+    if (!name || !phone || !password || !role) {
       return res.status(400).send({
         message: "All fields (name, phone, password, role) are required",
         success: false
       });
     }
+if (role !== "user") {
+  const envKey = process.env.BARBER_SECRET_KEY ? String(process.env.BARBER_SECRET_KEY).trim() : null;
+  const providedKey = barberSecretKey ? String(barberSecretKey).trim() : null;
 
-    const existingUser = await userModel.findOne({ phone: req.body.phone });
+  if (!providedKey || providedKey !== envKey) {
+    return res.status(400).send({
+      success: false,
+      message: "Invalid or missing Barber Secret Key",
+    });
+  }
+}
 
+    // Check existing user FIRST before doing publicId DB checks
+    const existingUser = await userModel.findOne({ phone });
     if (existingUser) {
       return res.status(200).send({
         message: "User already exists",
@@ -99,25 +112,37 @@ const registerController = async (req, res) => {
       });
     }
 
-    const password = req.body.password;
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(password, salt);
-    req.body.password = hash;
+    // Generate unique public ID
+    let publicId;
+    do {
+      publicId = generatePublicId();
+    } while (await userModel.exists({ publicId }));
 
-    const newUser = new userModel(req.body);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new userModel({
+      name,
+      phone,
+      password: hashedPassword,
+      role,
+      publicId,
+    });
     await newUser.save();
 
     const safeUser = {
       _id: newUser._id,
       id: newUser._id,
+      publicId: newUser.publicId,
       name: newUser.name,
       phone: newUser.phone,
       role: newUser.role
     };
 
+    const secretKey = getJwtSecret();
     const token = jwt.sign(
       { userId: newUser._id, phone: newUser.phone },
-      process.env.SECRET_KEY,
+      secretKey,
       { expiresIn: "1h" }
     );
 
@@ -140,7 +165,7 @@ const registerController = async (req, res) => {
 
 const authController = async (req, res) => {
   try {
-    const userId = req.body.userId;
+    const { userId } = req.body;
     const user = await userModel.findById(userId);
     
     if (!user) {        
@@ -153,6 +178,7 @@ const authController = async (req, res) => {
     const safeUser = {
       _id: user._id,
       id: user._id,
+      publicId: user.publicId,
       name: user.name,
       phone: user.phone,
       role: user.role,
@@ -184,12 +210,13 @@ const handleProfileEdit = async (req, res) => {
         success: false,
       });
     }
+
     if (phone.length !== 10) {
-  return res.status(400).send({
-    message: "Phone number must be exactly 10 digits",
-    success: false,
-  });
-}
+      return res.status(400).send({
+        message: "Phone number must be exactly 10 digits",
+        success: false,
+      });
+    }
 
     const existingPhoneUser = await userModel.findOne({ phone, _id: { $ne: id } });
     if (existingPhoneUser) {
@@ -215,10 +242,15 @@ const handleProfileEdit = async (req, res) => {
     const safeUser = {
       _id: updatedUser._id,
       id: updatedUser._id,
+      publicId: updatedUser.publicId,
       name: updatedUser.name,
       phone: updatedUser.phone,
       role: updatedUser.role,
     };
+
+    
+
+
 
     return res.status(200).send({
       message: "Profile updated successfully",

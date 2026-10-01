@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import SearchIcon from "@mui/icons-material/Search";
+import axios from "axios";
+import dayjs from "dayjs";
+
 import {
   Box,
   Typography,
@@ -13,75 +15,153 @@ import {
   TableHead,
   Paper,
   Stack,
-  Divider,
-  Button,
   TextField,
   InputAdornment,
+  alpha,
+  useTheme,
+  useMediaQuery,
+  Divider,
 } from "@mui/material";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
+import SearchIcon from "@mui/icons-material/Search";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import ScheduleIcon from "@mui/icons-material/Schedule";
-import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import PersonIcon from "@mui/icons-material/Person";
-import ContentCutIcon from "@mui/icons-material/ContentCut";
-import axios from "axios";
-import dayjs from "dayjs";
-import { bookingData } from "../redux/features/bookingSlice.js";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import Button from "./Button";
+
+
+import { RoleGuard } from "./RoleGuard.jsx";
+import socket from "../socket/socket.js";
+
+import {
+  bookingData,
+  addBooking,
+  deleteBooking,
+  updateBooking,
+  updateStatus,
+} from "../redux/features/bookingSlice.js";
 import { showLoading, hideLoading } from "../redux/features/alertSlice.js";
 
 const WaitingList = () => {
+  const theme = useTheme();
+  const isTabletOrMobile = useMediaQuery(theme.breakpoints.down("md"));
   const dispatch = useDispatch();
   const bookings = useSelector((state) => state.booking?.bookings || []);
   const user = useSelector((state) => state.auth?.user);
-  const isAdmin = user?.role === "admin";
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [showOnlyMine, setShowOnlyMine] = useState(false);
+  const [showOnlyPending, setShowOnlyPending] = useState(false);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       dispatch(showLoading());
       const res = await axios.get("/api/v1/user/getBookings");
       dispatch(bookingData(res.data.data));
-      dispatch(hideLoading());
     } catch (err) {
+      console.error("Failed to fetch bookings:", err);
+    } finally {
       dispatch(hideLoading());
-      console.log(err);
     }
-  };
-
-  useEffect(() => {
-    fetchBookings();
   }, [dispatch]);
 
-  const getShortUserId = (booking) => {
-    const rawId = booking?.userId?._id || booking?.userId;
-    return typeof rawId === "string" && rawId ? rawId.slice(0, 4).toUpperCase() : "N/A";
+    //Bookings fetch
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+ useEffect(() => {
+  const handleNewBooking = (booking) => {
+    dispatch(addBooking(booking));
   };
 
+  const handleDeletedBooking = (booking) => {
+    dispatch(deleteBooking(booking));
+  };
+
+  const handleUpdatedBooking = (booking) => {
+    dispatch(updateBooking(booking));
+  };
+
+  const handleStatusUpdated = (booking) => {
+    dispatch(updateStatus(booking));
+  };
+
+  socket.on("bookingCreated", handleNewBooking);
+  socket.on("bookingDeleted", handleDeletedBooking);
+  socket.on("bookingUpdated", handleUpdatedBooking);
+  socket.on("bookingStatusUpdated", handleStatusUpdated);
+
+  return () => {
+    socket.off("bookingCreated", handleNewBooking);
+    socket.off("bookingDeleted", handleDeletedBooking);
+    socket.off("bookingUpdated", handleUpdatedBooking);
+    socket.off("bookingStatusUpdated", handleStatusUpdated);
+  };
+}, [dispatch]);
+
+  const getPublicUserId = (booking) => {
+    if (booking?.userId?.publicId) {
+      return String(booking.userId.publicId).toUpperCase();
+    }
+    const rawId = booking?.userId?._id || booking?.userId;
+    return typeof rawId === "string" && rawId ? rawId.slice(0, 5).toUpperCase() : "N/A";
+  };
+
+  const checkIsMyBooking = useCallback(
+    (b) => {
+      const bookingUserId = b.userId?._id || b.userId;
+      const currentUserId = user?._id || user?.id;
+      return Boolean(currentUserId && String(bookingUserId) === String(currentUserId));
+    },
+    [user]
+  );
+
   const filteredBookings = useMemo(() => {
-    if (!searchTerm.trim()) return bookings;
+    let list = bookings;
 
-    const query = searchTerm.toLowerCase().trim().replace(/^(id-|uid-|@)/i, "");
-
-    return bookings.filter((b) => {
-      const shortUserId = getShortUserId(b).toLowerCase();
-      const userName = b.userId?.name?.toLowerCase() || "";
-      const serviceName = b.service?.serviceName?.toLowerCase() || "";
-      const status = (b.status || "pending").toLowerCase();
-      const dateStr = b.bookingTime
-        ? dayjs(b.bookingTime).format("DD MMM YYYY, hh:mm A").toLowerCase()
-        : "";
-
-      return (
-        shortUserId.includes(query) ||
-        userName.includes(query) ||
-        serviceName.includes(query) ||
-        status.includes(query) ||
-        dateStr.includes(query)
-      );
+    // 1. Filter out past bookings (keep only today and future bookings)
+    const startOfToday = dayjs().startOf("day");
+    list = list.filter((b) => {
+      if (!b.bookingTime) return false;
+      return dayjs(b.bookingTime).isAfter(startOfToday) || dayjs(b.bookingTime).isSame(startOfToday, "day");
     });
-  }, [bookings, searchTerm]);
+
+    // 2. Filter by user's own bookings
+    if (showOnlyMine) {
+      list = list.filter(checkIsMyBooking);
+    }
+
+    // 3. Filter by pending status
+    if (showOnlyPending) {
+      list = list.filter((b) => !b.status || b.status.toLowerCase() === "pending");
+    }
+
+    // 4. Search query filter
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase().trim().replace(/^(id-|uid-|@)/i, "");
+      list = list.filter((b) => {
+        const publicId = getPublicUserId(b).toLowerCase();
+        const userName = b.userId?.name?.toLowerCase() || "";
+        const serviceName = b.service?.serviceName?.toLowerCase() || "";
+        const status = (b.status || "pending").toLowerCase();
+        const dateStr = b.bookingTime
+          ? dayjs(b.bookingTime).format("DD MMM YYYY, hh:mm A").toLowerCase()
+          : "";
+
+        return (
+          publicId.includes(query) ||
+          userName.includes(query) ||
+          serviceName.includes(query) ||
+          status.includes(query) ||
+          dateStr.includes(query)
+        );
+      });
+    }
+
+    return list;
+  }, [bookings, searchTerm, showOnlyMine, showOnlyPending, checkIsMyBooking]);
 
   const handleStatusChange = async (bookingId, status) => {
     try {
@@ -89,351 +169,433 @@ const WaitingList = () => {
       await axios.post(`/api/v1/user/admin/booking/${bookingId}/status`, { status });
       await fetchBookings();
     } catch (err) {
+      console.error("Failed to update status:", err);
+    } finally {
       dispatch(hideLoading());
-      console.log(err);
     }
   };
 
-  const totalBookings = bookings?.length || 0;
-  const pendingCount =
-    bookings?.filter((b) => !b.status || b.status.toLowerCase() === "pending")
-      .length || 0;
+  const totalBookings = filteredBookings.length;
 
-  const getStatus = (status) => {
+  const getStatusMeta = (status) => {
     const s = status?.toLowerCase();
     switch (s) {
       case "conformed":
-        return { text: "Conformed", icon: <CheckCircleIcon sx={{ fontSize: 16 }} />, color: "#16A34A" };
+      case "confirmed":
+        return {
+          label: "Confirmed",
+          mainColor: theme.palette.success.dark,
+          bgColor: alpha(theme.palette.success.main, 0.12),
+          borderColor: alpha(theme.palette.success.main, 0.28),
+          icon: <CheckCircleOutlineIcon sx={{ fontSize: 15 }} />,
+        };
       case "completed":
-        return { text: "Completed", icon: <CheckCircleIcon sx={{ fontSize: 16 }} />, color: "#059669" };
+        return {
+          label: "Completed",
+          mainColor: theme.palette.secondary.dark,
+          bgColor: alpha(theme.palette.secondary.main, 0.12),
+          borderColor: alpha(theme.palette.secondary.main, 0.28),
+          icon: <CheckCircleOutlineIcon sx={{ fontSize: 15 }} />,
+        };
       case "cancelled":
-        return { text: "Cancelled", icon: <CancelIcon sx={{ fontSize: 16 }} />, color: "#DC2626" };
+      case "rejected":
+        return {
+          label: "Cancelled",
+          mainColor: theme.palette.error.dark,
+          bgColor: alpha(theme.palette.error.main, 0.12),
+          borderColor: alpha(theme.palette.error.main, 0.28),
+          icon: <CancelOutlinedIcon sx={{ fontSize: 15 }} />,
+        };
       case "pending":
       default:
-        return { text: "Pending", icon: <ScheduleIcon sx={{ fontSize: 16 }} />, color: "#2563EB" };
+        return {
+          label: "Pending",
+          mainColor: theme.palette.info.dark,
+          bgColor: alpha(theme.palette.info.main, 0.12),
+          borderColor: alpha(theme.palette.info.main, 0.28),
+          icon: <ScheduleIcon sx={{ fontSize: 15 }} />,
+        };
     }
   };
 
-  return (
-    <Box sx={{ width: "100%", py: { xs: 2, sm: 3 } }}>
-      <Paper
-        elevation={0}
+  const renderStatusBadge = (status) => {
+    const meta = getStatusMeta(status);
+    return (
+      <Box
         sx={{
-          p: { xs: 2, sm: 3 },
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.6,
+          px: 1.5,
+          py: 0.5,
+          borderRadius: "20px",
+          backgroundColor: meta.bgColor,
+          color: meta.mainColor,
+          border: `1px solid ${meta.borderColor}`,
+        }}
+      >
+        {meta.icon}
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 700,
+            fontSize: "12px",
+            color: meta.mainColor,
+            lineHeight: 1,
+          }}
+        >
+          {meta.label}
+        </Typography>
+      </Box>
+    );
+  };
+
+  const renderBookingTime = (bookingTime) => {
+    if (!bookingTime) return <Typography variant="body2" color="text.secondary">N/A</Typography>;
+    const timeStr = dayjs(bookingTime).format("hh:mm A");
+    const dateStr = dayjs(bookingTime).format("DD MMM YYYY");
+
+    return (
+      <Box sx={{ textAlign: "center" }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
+          {timeStr}
+        </Typography>
+        <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "11px" }}>
+          {dateStr}
+        </Typography>
+      </Box>
+    );
+  };
+
+  const idBadgeSx = {
+    px: 1.2,
+    py: 0.4,
+    backgroundColor: alpha(theme.palette.grey[500], 0.12),
+    color: theme.palette.grey[800],
+    border: `1px solid ${theme.palette.grey[400]}`,
+    borderRadius: "4px",
+    fontFamily: "monospace",
+    fontSize: "12px",
+    fontWeight: 700,
+    display: "inline-block",
+  };
+
+  return (
+    <Box sx={{ width: "100%", py: { xs: 1.5, sm: 2, md: 3 } }}>
+      {/* Search & Filter Top Bar */}
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 2, sm: 2.5 },
           mb: 3,
           borderRadius: 2,
-          border: "1px solid #E5E7EB",
+          borderColor: theme.palette.divider,
         }}
       >
         <Box
           sx={{
             display: "flex",
-            flexDirection: { xs: "column", md: "row" },
+            flexDirection: { xs: "column", sm: "row" },
             justifyContent: "space-between",
-            alignItems: { xs: "stretch", md: "center" },
+            alignItems: "center",
             gap: 2,
           }}
         >
-          <Typography variant="h5" sx={{ fontWeight: 700, color: "#111827" }}>
-            Waiting List
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
+              Waiting List
+            </Typography>
+            <Chip
+              label={`${totalBookings} Active`}
+              size="small"
+              sx={{
+                fontWeight: 600,
+                fontSize: "12px",
+                backgroundColor: alpha(theme.palette.text.primary, 0.06),
+              }}
+            />
+          </Stack>
 
           <Stack
             direction={{ xs: "column", sm: "row" }}
             spacing={1.5}
             alignItems="center"
-            sx={{ flexWrap: "wrap", width: { xs: "100%", md: "auto" } }}
+            justifyContent="center"
+            sx={{ width: { xs: "100%", sm: "auto" } }}
           >
             <TextField
               size="small"
-              placeholder="Search User ID, name..."
+              placeholder="Search ID , name ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: "#9CA3AF", fontSize: 20 }} />
+                    <SearchIcon sx={{ color: "text.secondary", fontSize: 20 }} />
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                width: { xs: "100%", sm: 240, md: 280 },
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                  backgroundColor: "#FFFFFF",
-                  fontSize: "14px",
-                },
-              }}
+              sx={{ width: { xs: "100%", sm: 240 } }}
             />
 
-            <Box
-              sx={{
-                px: 2,
-                py: 0.8,
-                borderRadius: 1.5,
-                border: "1px solid #BFDBFE",
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                backgroundColor: "#EFF6FF",
-                width: { xs: "100%", sm: "auto" },
-                justifyContent: "center",
-              }}
-            >
-              <PeopleAltIcon sx={{ color: "#2563EB", fontSize: 18 }} />
-              <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1E40AF" }}>
-                {pendingCount} Waiting
-              </Typography>
-            </Box>
+            <RoleGuard allowedRoles={["user"]} userRole={user?.role}>
+              <Button
+                variant={showOnlyMine ? "tertiary" : "primary"}
+                size="sm"
+                onClick={() => setShowOnlyMine(!showOnlyMine)}
+                startIcon={showOnlyMine ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                sx={{ width: { xs: "100%", sm: "auto" }, height: 38 }}
+              >
+                {showOnlyMine ? "Show All" : "My Booking"}
+              </Button>
+            </RoleGuard>
 
-            <Box
-              sx={{
-                px: 2,
-                py: 0.8,
-                borderRadius: 1.5,
-                border: "1px solid #E5E7EB",
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                backgroundColor: "#F9FAFB",
-                width: { xs: "100%", sm: "auto" },
-                justifyContent: "center",
-              }}
-            >
-              <Typography sx={{ fontSize: 14, fontWeight: 500, color: "#6B7280" }}>
-                Total: <strong>{totalBookings}</strong>
-              </Typography>
-            </Box>
+            <RoleGuard allowedRoles={["admin"]} userRole={user?.role}>
+              <Button
+                variant={showOnlyPending ? "tertiary" : "primary"}
+                size="sm"
+                onClick={() => setShowOnlyPending(!showOnlyPending)}
+                startIcon={<ScheduleIcon />}
+                sx={{ width: { xs: "100%", sm: "auto" }, height: 38 }}
+              >
+                {showOnlyPending ? "Show All" : "Show Pending"}
+              </Button>
+            </RoleGuard>
           </Stack>
         </Box>
       </Paper>
 
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 2, sm: 3 },
-          borderRadius: 2,
-          border: "1px solid #E5E7EB",
-        }}
-      >
-        {filteredBookings.length > 0 ? (
-          <>
-            {/* Mobile & Tablet Card View (< 900px) */}
-            <Box
-              sx={{
-                display: { xs: "grid", md: "none" },
-                gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
-                gap: 2,
-              }}
-            >
-              {filteredBookings.map((b, index) => {
-                const statusInfo = getStatus(b.status);
-                const isPending = !b.status || b.status.toLowerCase() === "pending";
-                const userIdBadge = getShortUserId(b);
+      {/* Main Content */}
+      {filteredBookings.length > 0 ? (
+        isTabletOrMobile ? (
+          /* Mobile / Tablet View */
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: 2.5,
+            }}
+          >
+            {filteredBookings.map((b, index) => {
+              const isPending = !b.status || b.status.toLowerCase() === "pending";
+              const publicId = getPublicUserId(b);
+              const isMyBooking = checkIsMyBooking(b);
 
-                return (
-                  <Paper
-                    key={b._id || index}
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      border: "1px solid #E5E7EB",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      gap: 1.5,
-                    }}
-                  >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <PersonIcon sx={{ color: "#6B7280", fontSize: 20 }} />
-                        <Typography sx={{ fontWeight: 700, color: "#111827" }}>
-                          {b.userId?.name || "N/A"}
-                        </Typography>
-                        <Chip
-                          label={userIdBadge}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: "11px",
-                            fontFamily: "monospace",
-                            fontWeight: 700,
-                            backgroundColor: "#F3F4F6",
-                            color: "#4B5563",
-                          }}
-                        />
+              return (
+                <Paper
+                  key={b._id || index}
+                  variant="outlined"
+                  sx={{
+                    flex: "1 1 300px",
+                    maxWidth: { xs: "100%", sm: 360 },
+                    p: 2.5,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    borderRadius: 2,
+                    borderColor: theme.palette.divider,
+                  }}
+                >
+                  <Stack spacing={2} alignItems="center">
+                    {/* Header: ID + Status */}
+                    <Box
+                      sx={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Box component="span" sx={idBadgeSx}>
+                        {publicId}
                       </Box>
-                      <Chip
-                        icon={statusInfo.icon}
-                        label={statusInfo.text}
-                        size="small"
-                        sx={{
-                          backgroundColor: "transparent",
-                          color: statusInfo.color,
-                          fontWeight: 700,
-                          "& .MuiChip-icon": { color: statusInfo.color },
-                        }}
-                      />
+                      {renderStatusBadge(b.status)}
                     </Box>
 
-                    <Divider />
+                    <Divider sx={{ width: "100%" }} />
 
-                    <Stack spacing={1}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <ContentCutIcon sx={{ color: "#9CA3AF", fontSize: 16 }} />
-                        <Typography sx={{ fontSize: 14, color: "#4B5563" }}>
-                          <strong>Service:</strong> {b.service?.serviceName || "N/A"}
+                    {/* Customer & Service Info */}
+                    <Stack spacing={1} alignItems="center" textAlign="center" sx={{ width: "100%" }}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Customer
+                        </Typography>
+                        <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                          <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                            {b.userId?.name || "N/A"}
+                          </Typography>
+                          {isMyBooking && (
+                            <Chip
+                              label="YOU"
+                              size="small"
+                              color="primary"
+                              sx={{ height: 18, fontSize: "10px", fontWeight: 700 }}
+                            />
+                          )}
+                        </Stack>
+                      </Box>
+
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Service
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {b.service?.serviceName || "N/A"}
                         </Typography>
                       </Box>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <CalendarTodayIcon sx={{ color: "#9CA3AF", fontSize: 16 }} />
-                        <Typography sx={{ fontSize: 14, color: "#4B5563" }}>
-                          {b.bookingTime ? dayjs(b.bookingTime).format("DD MMM YYYY, hh:mm A") : "N/A"}
+
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Schedule
                         </Typography>
+                        {renderBookingTime(b.bookingTime)}
                       </Box>
                     </Stack>
+                  </Stack>
 
-                    {isAdmin && isPending && (
-                      <>
-                        <Divider />
-                        <Stack direction="row" spacing={1} justifyContent="flex-end">
-                          <Button
-                            variant="contained"
-                            color="success"
-                            size="small"
-                            disableElevation
-                            startIcon={<CheckCircleIcon />}
-                            onClick={() => handleStatusChange(b._id, "conformed")}
-                            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5, flex: { xs: 1, sm: "initial" } }}
-                          >
-                            Confirm
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            startIcon={<CancelIcon />}
-                            onClick={() => handleStatusChange(b._id, "cancelled")}
-                            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5, flex: { xs: 1, sm: "initial" } }}
-                          >
-                            Cancel
-                          </Button>
-                        </Stack>
-                      </>
+                  {/* Actions */}
+                  <RoleGuard allowedRoles={["admin"]} userRole={user?.role}>
+                    {isPending && (
+                      <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ pt: 2.5, width: "100%" }}>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={() => handleStatusChange(b._id, "conformed")}
+                          sx={{ flex: 1 }}
+                        >
+                          Confirm
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleStatusChange(b._id, "cancelled")}
+                          sx={{ flex: 1 }}
+                        >
+                          Cancel
+                        </Button>
+                      </Stack>
                     )}
-                  </Paper>
-                );
-              })}
-            </Box>
-
-            {/* Desktop Table View (>= 900px) */}
-            <TableContainer
+                  </RoleGuard>
+                </Paper>
+              );
+            })}
+          </Box>
+        ) : (
+          /* Desktop Table View */
+          <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+            <Table
               sx={{
-                display: { xs: "none", md: "block" },
-                borderRadius: 1.5,
-                border: "1px solid #E5E7EB",
-                overflowX: "auto",
-                maxWidth: "100%",
+                minWidth: 700,
+                "& .MuiTableCell-root": {
+                  border: `1px solid ${theme.palette.divider}`,
+                  py: 1.5,
+                  px: 2,
+                },
               }}
             >
-              <Table sx={{ minWidth: 750 }}>
-                <TableHead sx={{ backgroundColor: "#F9FAFB" }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>User ID</TableCell>
-                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>User Name</TableCell>
-                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Service</TableCell>
-                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Booking Date & Time</TableCell>
-                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }} align="center">
-                      Status
-                    </TableCell>
-                    {isAdmin && (
-                      <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }} align="center">
-                        Actions
-                      </TableCell>
-                    )}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredBookings.map((b, index) => {
-                    const statusInfo = getStatus(b.status);
-                    const isPending = !b.status || b.status.toLowerCase() === "pending";
-                    const userIdBadge = getShortUserId(b);
+              <TableHead sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.04) }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Booking Schedule</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="center">Status</TableCell>
+                  <RoleGuard allowedRoles={["admin"]} userRole={user?.role}>
+                    <TableCell sx={{ fontWeight: 700 }} align="center">Actions</TableCell>
+                  </RoleGuard>
+                </TableRow>
+              </TableHead>
 
-                    return (
-                      <TableRow key={b._id || index} sx={{ "&:hover": { backgroundColor: "#F9FAFB" } }}>
-                        <TableCell sx={{ fontWeight: 700, fontFamily: "monospace", color: "#374151" }}>
-                          {userIdBadge}
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>{b.userId?.name || "N/A"}</TableCell>
-                        <TableCell>{b.service?.serviceName || "N/A"}</TableCell>
-                        <TableCell sx={{ whiteSpace: "nowrap" }}>
-                          {b.bookingTime ? dayjs(b.bookingTime).format("DD MMM YYYY, hh:mm A") : "N/A"}
-                        </TableCell>
+              <TableBody>
+                {filteredBookings.map((b, index) => {
+                  const isPending = !b.status || b.status.toLowerCase() === "pending";
+                  const publicId = getPublicUserId(b);
+                  const isMyBooking = checkIsMyBooking(b);
+
+                  return (
+                    <TableRow key={b._id || index} hover>
+                      <TableCell>
+                        <Box component="span" sx={idBadgeSx}>
+                          {publicId}
+                        </Box>
+                      </TableCell>
+
+                      <TableCell>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                            {b.userId?.name || "N/A"}
+                          </Typography>
+                          {isMyBooking && (
+                            <Chip
+                              label="YOU"
+                              size="small"
+                              color="primary"
+                              sx={{ height: 18, fontSize: "10px", fontWeight: 700 }}
+                            />
+                          )}
+                        </Stack>
+                      </TableCell>
+
+                      <TableCell sx={{ fontWeight: 700 }}>
+                        {b.service?.serviceName || "N/A"}
+                      </TableCell>
+
+                      <TableCell>
+                        {renderBookingTime(b.bookingTime)}
+                      </TableCell>
+
+                      <TableCell align="center">
+                        {renderStatusBadge(b.status)}
+                      </TableCell>
+
+                      <RoleGuard allowedRoles={["admin","barber"]} userRole={user?.role}>
                         <TableCell align="center">
-                          <Chip
-                            icon={statusInfo.icon}
-                            label={statusInfo.text}
-                            size="small"
-                            sx={{
-                              backgroundColor: "transparent",
-                              color: statusInfo.color,
-                              fontWeight: 600,
-                              "& .MuiChip-icon": { color: statusInfo.color },
-                            }}
-                          />
+                          {isPending ? (
+                            <Stack direction="row" spacing={1} justifyContent="center">
+                              <Button
+                                variant="success"
+                                size="sm"
+                                onClick={() => handleStatusChange(b._id, "conformed")}
+                              >
+                                Confirm
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleStatusChange(b._id, "cancelled")}
+                              >
+                                Cancel
+                              </Button>
+                            </Stack>
+                          ) : (
+                            <Typography variant="caption" color="text.disabled">—</Typography>
+                          )}
                         </TableCell>
-                        {isAdmin && (
-                          <TableCell align="center">
-                            {isPending ? (
-                              <Stack direction="row" spacing={1} justifyContent="center">
-                                <Button
-                                  variant="contained"
-                                  color="success"
-                                  size="small"
-                                  disableElevation
-                                  startIcon={<CheckCircleIcon />}
-                                  onClick={() => handleStatusChange(b._id, "conformed")}
-                                  sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5, whiteSpace: "nowrap" }}
-                                >
-                                  Confirm
-                                </Button>
-                                <Button
-                                  variant="outlined"
-                                  color="error"
-                                  size="small"
-                                  startIcon={<CancelIcon />}
-                                  onClick={() => handleStatusChange(b._id, "cancelled")}
-                                  sx={{ textTransform: "none", fontWeight: 600, borderRadius: 1.5, whiteSpace: "nowrap" }}
-                                >
-                                  Cancel
-                                </Button>
-                              </Stack>
-                            ) : (
-                              <Typography variant="caption" sx={{ color: "#9CA3AF" }}>
-                                No actions
-                              </Typography>
-                            )}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </>
-        ) : (
-          <Box sx={{ textAlign: "center", py: 4 }}>
-            <Typography variant="h6" sx={{ color: "#6B7280", fontWeight: 600 }}>
-              {searchTerm ? "No matching bookings found" : "No bookings found"}
-            </Typography>
-            <Typography sx={{ color: "#9CA3AF", fontSize: 14 }}>
-              {searchTerm ? "Try searching with a different User ID or keyword" : "Book your first appointment to get started"}
-            </Typography>
-          </Box>
-        )}
-      </Paper>
+                      </RoleGuard>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )
+      ) : (
+        <Paper variant="outlined" sx={{ borderRadius: 2, p: 6, textAlign: "center" }}>
+          <Typography variant="h6" color="text.primary" sx={{ fontWeight: 600 }}>
+            {showOnlyPending
+              ? "No pending bookings right now"
+              : showOnlyMine
+              ? "You have no upcoming bookings right now"
+              : "No upcoming bookings found"}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {showOnlyMine
+              ? "Your appointments will show up here once created."
+              : "Try adjusting your search or clear filters."}
+          </Typography>
+        </Paper>
+      )}
     </Box>
   );
 };

@@ -1,9 +1,8 @@
-// Home.jsx
 import { useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Typography, Container, CircularProgress } from '@mui/material';
+import { Box, Typography, Container } from '@mui/material';
 
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ListAltIcon from '@mui/icons-material/ListAlt';
@@ -17,7 +16,7 @@ import { RoleGuard } from '../components/RoleGuard';
 import { setUser } from '../redux/features/authSlice';
 import { toggleBooking, hideBooking } from '../redux/features/bookingSlice';
 import { showLoading, hideLoading } from '../redux/features/alertSlice';
-
+import Spinner from '../components/Spinner';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -26,7 +25,6 @@ const Home = () => {
 
   const { user } = useSelector((state) => state.auth);
   const { isVisible } = useSelector((state) => state.booking);
-  const { loading } = useSelector((state) => state.alerts || {});
 
   const getUserData = async () => {
     const token = localStorage.getItem('token');
@@ -44,7 +42,6 @@ const Home = () => {
       );
 
       if (response.data.success) {
-        
         dispatch(setUser(response.data.data));
       } else {
         localStorage.removeItem('token');
@@ -62,7 +59,7 @@ const Home = () => {
   };
 
   useEffect(() => {
-    if (!user) getUserData();
+    if (!user || !user.role) getUserData();
   }, []);
 
   useEffect(() => {
@@ -73,14 +70,12 @@ const Home = () => {
     waitingListRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Prevent UI flashing before user data loads
-  if (!user && loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
+  // ✅ Show spinner until both user object and role are present
+  if (!user || !user.role) {
+    return <Spinner />;
   }
+
+  const role = user.role.toLowerCase();
 
   return (
     <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: '#F8FAFC' }}>
@@ -108,14 +103,16 @@ const Home = () => {
               </Typography>
 
               <Typography sx={{ fontSize: { xs: '15px', sm: '18px' }, color: '#475569', maxWidth: '560px', mx: 'auto' }}>
-                {user?.role === 'user'
+                {role === 'user'
                   ? 'Book your appointment in seconds. Select your preferred service.'
                   : 'Manage daily schedules, barber queues, and client appointments.'}
               </Typography>
             </Box>
 
             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5 }}>
-              {user?.role === 'user' ? (
+              {/* ✅ Explicit check for user vs barber/admin */}
+
+               <RoleGuard allowedRoles={["user"]}>
                 <Button
                   variant="primary"
                   size="lg"
@@ -125,7 +122,10 @@ const Home = () => {
                   <CalendarTodayIcon className="!text-[18px]" />
                   Book an Appointment
                 </Button>
-              ) : (
+              </RoleGuard>
+
+                            <RoleGuard allowedRoles={["barber"]}>
+
                 <Button
                   variant="secondary"
                   size="lg"
@@ -135,7 +135,8 @@ const Home = () => {
                   <ListAltIcon className="!text-[18px]" />
                   Manage Bookings
                 </Button>
-              )}
+                          </RoleGuard>
+
 
               <RoleGuard allowedRoles={["user"]}>
                 <Box
@@ -160,10 +161,10 @@ const Home = () => {
         )}
       </Box>
 
-        <RoleGuard allowedRoles={["user"]}>
-      <Container ref={waitingListRef} maxWidth="lg" sx={{ pb: { xs: 8, md: 10 }, px: { xs: 2, sm: 3 } }}>
-        <WaitingList />
-      </Container>
+      <RoleGuard allowedRoles={["user"]}>
+        <Container ref={waitingListRef} maxWidth="lg" sx={{ pb: { xs: 8, md: 10 }, px: { xs: 2, sm: 3 } }}>
+          <WaitingList />
+        </Container>
       </RoleGuard>
     </Box>
   );

@@ -22,17 +22,20 @@ app.use(express.json());
 // Routes
 app.use("/api/v1/user", require("./routes/userRoute.js"));
 
-
 // Create HTTP server (for both Express and Socket.IO)
 const httpServer = http.createServer(app);
 
-// Socket.IO setup
-const io = new Server(httpServer, { 
+// Socket.IO setup (Declared ONLY ONCE)
+const io = require("socket.io")(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: "http://localhost:5173", // Replace with your frontend URL (or use "*" for development)
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
+
+// Make io accessible to controllers
+app.set("io", io);
 
 // Handle socket connections
 require("./sockets/socketHandler.js")(io);

@@ -1,187 +1,264 @@
-const bookingModel = require('../models/bookingModel');
+const bookingModel = require("../models/bookingModel");
 
+// Create new booking
 const bookingController = async (req, res) => {
+  try {
 
-    try{
-        // Extract data from request body (userId is added by authMiddleware)
-        const { service, bookingTime, userId } = req.body;
 
-        // Validate required fields
-        if (!service || !bookingTime || !userId) {
-            return res.status(400).send({
-                message: "Missing required fields: service, bookingTime, and userId are required",
-                success: false
-            });
-        }
+    // Extract data from request body (userId is added by authMiddleware)
+    const { service, bookingTime, userId } = req.body;
 
-        // Create booking with all required fields
-        const booking = new bookingModel({
-            userId: userId,
-            service: service,
-            bookingTime: bookingTime
-        });
-
-        //PREVENTS DOUBLE BOOKING BY SAME USER
-        const existingBooking = await bookingModel.findOne({userId:userId});
-        if(existingBooking)
-        {
-            
-            return res.status(400).send({
-                message: "Booking already exists for this user",
-                success: false
-            });
-          
-        }
-
-        await booking.save();
-
-        res.status(200).send({
-            message: "Booking info received successfully",
-            success: true,
-            data: booking
-        });
+    // Validate required fields
+    if (!service || !bookingTime || !userId) {
+      return res.status(400).send({
+        message: "Missing required fields: service, bookingTime, and userId are required",
+        success: false,
+      });
     }
-    catch(error){
-        res.status(500).send({
-            message: "Error in booking controller",
-            error: error.message,
-            success: false
-        });
-    }   
 
-}
-
-const bookingsFetchController = async(req,res) =>{
-  try{
-        
-
-       const bookingData = await bookingModel.find().populate('service').populate('userId');
-
-       
-
-        res.status(200).send({
-            message: "BookingData received successfully",
-            success: true,
-            data: bookingData
-        });
+    // Validate date & check if date is in the past
+    const appointmentDate = new Date(bookingTime);
+    if (isNaN(appointmentDate.getTime()) || appointmentDate < new Date()) {
+      return res.status(400).send({
+        message: "Cannot book an appointment in the past",
+        success: false,
+      });
     }
-    catch(error){
-        res.status(500).send({
-            message: "Error in booking controller",
-            error: error.message,
-            success: false
-        });
-    }   
+
+    // Calculate expiration timestamp (23:59:59.999 of the appointment date)
+    const expiresAt = new Date(appointmentDate);
+    expiresAt.setHours(23, 59, 59, 999);
+
+   const existingBooking = await bookingModel.findOne({
+  userId: userId,
+  bookingTime: { $gte: new Date() },
+  status: { $ne: "cancelled" }
+});
+
+if (existingBooking) {
+  return res.status(400).send({
+    message: "You already have an active upcoming booking.",
+    success: false,
+  });
 }
 
-const personalBookingFetchController = async(req,res) =>{
-    try{
-            // userId is added by authMiddleware
-            const userId = req.body.userId;
-            
-            if (!userId) {
-                return res.status(400).send({
-                    message: "User ID is required",
-                    success: false
-                });
-            }
+    // Create booking with all required fields
+    const booking = new bookingModel({
+      userId: userId,
+      service: service,
+      bookingTime: bookingTime,
+      expiresAt: expiresAt,
+    });
 
-            const bookingData = await bookingModel.findOne({userId:userId}).populate('service').populate('userId');
+     await booking.save();
 
-            res.status(200).send({
-                message: "Personal BookingData received successfully",
-                success: true,
-                data: bookingData
-            });
-        }   
-        catch(error){
+    //Fetching to show to all users LIVE using Socket
+    const populatedBooking = await bookingModel
+  .findById(booking._id)
+  .populate("service")
+  .populate("userId");
 
-            res.status(500).send({
-                message: "Error in personal booking controller",
-                error: error.message,   
-                success: false
-            });
-        }
-}
 
+   
+
+    //Socket Define
+    const io = req.app.get("io");
+
+    //Send to Everyone
+    io.emit("bookingCreated", populatedBooking);
+
+    return res.status(200).send({
+      message: "Booking info received successfully",
+      success: true,
+      data: booking,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: "Error in booking controller",
+      error: error.message,
+      success: false,
+    });
+  }
+};
+
+// Fetch all bookings (Filtered to prevent fetching past bookings during MongoDB TTL buffer)
+const bookingsFetchController = async (req, res) => {
+  try {
+    // Filter out past bookings immediately so lingering docs during TTL cleanup don't show
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const bookingData = await bookingModel
+      .find({ bookingTime: { $gte: startOfToday } })
+      .sort({ bookingTime: 1 })
+      .populate("service")
+      .populate("userId");
+
+    return res.status(200).send({
+      message: "BookingData received successfully",
+      success: true,
+      data: bookingData,
+    });
+
+
+
+  } catch (error) {
+    return res.status(500).send({
+      message: "Error in bookings fetch controller",
+      error: error.message,
+      success: false,
+    });
+  }
+};
+
+// Fetch single user's booking
+const personalBookingFetchController = async (req, res) => {
+  try {
+    const userId = req.userId || req.body.userId || req.query.userId;
+
+    if (!userId) {
+      return res.status(400).send({
+        message: "User ID is required",
+        success: false,
+      });
+    }
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const bookingData = await bookingModel
+      .findOne({ userId: userId, bookingTime: { $gte: startOfToday } })
+      .populate("service")
+      .populate("userId");
+
+    return res.status(200).send({
+      message: "Personal BookingData received successfully",
+      success: true,
+      data: bookingData,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: "Error in personal booking controller",
+      error: error.message,
+      success: false,
+    });
+  }
+};
+
+// Delete a booking
 const deleteBookingController = async (req, res) => {
-    try {
-        const bookingId = req.params.id;
-        if (!bookingId) {
-            return res.status(400).send({
-                message: "Booking ID is required",
-                success: false
-            });
-        }
-        const deletedBooking = await bookingModel.findByIdAndDelete(bookingId);
-        if (!deletedBooking) {
-            return res.status(404).send({
-                message: "Booking not found",
-                success: false
-            });
-        }   
-        res.status(200).send({
-            message: "Booking deleted successfully",
-            success: true,
-            data: deletedBooking
-        });
-    } catch (error) {
-        res.status(500).send({
-            message: "Error in delete booking controller",  
-            error: error.message,
-            success: false
-        });
+  try {
+    const bookingId = req.params.id;
+    if (!bookingId) {
+      return res.status(400).send({
+        message: "Booking ID is required",
+        success: false,
+      });
     }
-}
+
+    const deletedBooking = await bookingModel.findByIdAndDelete(bookingId);
+    if (!deletedBooking) {
+      return res.status(404).send({
+        message: "Booking not found",
+        success: false,
+      });
+    }
+
+     //Socket Define
+    const io = req.app.get("io");
+
+    //Socket Send
+    io.emit("bookingDeleted", deletedBooking);
 
 
+    return res.status(200).send({
+      message: "Booking deleted successfully",
+      success: true,
+      data: deletedBooking,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: "Error in delete booking controller",
+      error: error.message,
+      success: false,
+    });
+  }
+};
+
+// Edit booking details
 const editBookingController = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    const { service, bookingTime } = req.body;
 
-    try {
-        const bookingId = req.params.id;
-        const { service, bookingTime } = req.body;  
-        if (!bookingId) {
-            return res.status(400).send({
-                message: "Booking ID is required",
-                success: false
-            });
-        }
-        if (!service || !bookingTime) {
-            return res.status(400).send({
-                message: "Service and bookingTime are required",
-                success: false
-            });
-        }
-        const updatedBooking = await bookingModel.findByIdAndUpdate(
-            bookingId,
-            { service, bookingTime },
-            { new: true }
-        ).populate('service').populate('userId');
-        if (!updatedBooking) {
-            return res.status(404).send({
-                message: "Booking not found",
-                success: false
-            });
-        }
-        res.status(200).send({
-            message: "Booking updated successfully",
-            success: true,
-            data: updatedBooking
-        });
-    } catch (error) {
-        res.status(500).send({
-            message: "Error in edit booking controller",
-            error: error.message,
-            success: false
-        });
+    if (!bookingId) {
+      return res.status(400).send({
+        message: "Booking ID is required",
+        success: false,
+      });
     }
-        
 
-}
+    if (!service || !bookingTime) {
+      return res.status(400).send({
+        message: "Service and bookingTime are required",
+        success: false,
+      });
+    }
+
+    // Validate updated booking time
+    const appointmentDate = new Date(bookingTime);
+    if (isNaN(appointmentDate.getTime()) || appointmentDate < new Date()) {
+      return res.status(400).send({
+        message: "Cannot update booking to a date in the past",
+        success: false,
+      });
+    }
+
+    // Recalculate expiresAt for the new booking time
+    const expiresAt = new Date(appointmentDate);
+    expiresAt.setHours(23, 59, 59, 999);
+
+    const updatedBooking = await bookingModel
+      .findByIdAndUpdate(
+        bookingId,
+        { service, bookingTime, expiresAt },
+        { new: true }
+      )
+      .populate("service")
+      .populate("userId");
+
+    if (!updatedBooking) {
+      return res.status(404).send({
+        message: "Booking not found",
+        success: false,
+      });
+    }
+
+      //Socket Define
+    const io = req.app.get("io");
+
+    //Socket Send
+    io.emit("bookingUpdated", updatedBooking);
+
+    return res.status(200).send({
+      message: "Booking updated successfully",
+      success: true,
+      data: updatedBooking,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: "Error in edit booking controller",
+      error: error.message,
+      success: false,
+    });
+  }
+};
+
+// Update booking status
 const handleStatusController = async (req, res) => {
   try {
     const bookingId = req.params.id;
-    const { status } = req.body; 
+    let { status } = req.body;
 
     if (!bookingId || !status) {
       return res.status(400).send({
@@ -190,13 +267,23 @@ const handleStatusController = async (req, res) => {
       });
     }
 
-    const updatedBooking = await bookingModel.findByIdAndUpdate(
-      bookingId,
-      { status },
-      { new: true, runValidators: true }
-    );
+    // Normalize spelling typo
+    if (status === "conformed") {
+      status = "confirmed";
+    }
 
-    // 2. Check if booking exists
+    const updatedBooking = await bookingModel
+      .findByIdAndUpdate(
+        bookingId,
+        { status },
+        {
+          new: true,
+          runValidators: true,
+        }
+      )
+      .populate("service")
+      .populate("userId");
+
     if (!updatedBooking) {
       return res.status(404).send({
         message: "Booking not found",
@@ -204,7 +291,17 @@ const handleStatusController = async (req, res) => {
       });
     }
 
-    // 3. Send successful response
+    // Get Socket.IO
+    const io = req.app.get("io");
+
+    // Send updated booking to everyone
+    io.emit("bookingStatusUpdated", updatedBooking);
+
+    console.log(
+      "Socket emitted bookingStatusUpdated:",
+      updatedBooking._id.toString()
+    );
+
     return res.status(200).send({
       message: "Booking status updated successfully",
       success: true,

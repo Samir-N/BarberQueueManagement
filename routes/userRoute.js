@@ -24,7 +24,7 @@ const {
 
 // --- Auth Routes ---
 router.post('/register', registerController);
-router.post('/login', loginController);
+router.post('/login/user', loginController);
 router.post('/getUserData', authMiddleware, authController);
 
 // --- Service Routes ---

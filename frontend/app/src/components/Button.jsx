@@ -63,29 +63,28 @@ const Button = ({
         boxShadow: 'none',
       },
     },
-    danger: {
-      backgroundColor: '#DC2626',
+    /* Solid Modern Emerald (Confirm) */
+    success: {
+      backgroundColor: '#10B981',
       color: '#FFFFFF',
       '&:hover': {
-        backgroundColor: '#B91C1C',
+        backgroundColor: '#059669',
         transform: 'translateY(-1.5px)',
       },
       '&:active': {
         transform: 'translateY(0px)',
-        boxShadow: '0 2px 8px -2px rgba(220, 38, 38, 0.2)',
       },
     },
-    success: {
-      backgroundColor: '#16A34A',
+    /* Solid Modern Rose (Cancel) */
+    danger: {
+      backgroundColor: '#F43F5E',
       color: '#FFFFFF',
       '&:hover': {
-        backgroundColor: '#15803D',
-        boxShadow: '0 6px 20px -4px rgba(22, 163, 74, 0.35)',
+        backgroundColor: '#E11D48',
         transform: 'translateY(-1.5px)',
       },
       '&:active': {
         transform: 'translateY(0px)',
-        boxShadow: '0 2px 8px -2px rgba(22, 163, 74, 0.2)',
       },
     },
   };
@@ -111,7 +110,7 @@ const Button = ({
         gap: '8px',
         transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        
+
         '&:focus-visible': {
           outline: '2px solid #2563EB',
           outlineOffset: '2px',

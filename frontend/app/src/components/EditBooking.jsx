@@ -36,6 +36,10 @@ const EditBooking = () => {
 
   const [openConfirm, setOpenConfirm] = useState(false);
 
+  useEffect(()=>{
+    
+  },[]);
+
   useEffect(() => {
     if (personalBooking) {
       setFormData({

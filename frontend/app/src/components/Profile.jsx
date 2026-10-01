@@ -159,6 +159,41 @@ const Profile = ({ onEdit }) => {
             }}
           >
             <TableBody>
+
+            <TableRow>
+  <TableCell
+    sx={{
+      fontWeight: 500,
+      color: "#6B7280",
+      width: "40%",
+      borderBottom: "1px solid #E5E7EB",
+    }}
+  >
+    ID
+  </TableCell>
+  <TableCell sx={{ borderBottom: "1px solid #E5E7EB" }}>
+    <Box
+      component="span"
+      sx={{
+        display: "inline-block",
+        px: 1.5,
+        py: 0.5,
+        backgroundColor: "#EEF2FF", // Soft indigo highlight
+        color: "#4338CA", // Deep indigo text
+        border: "1px solid #C7D2FE",
+        borderRadius: "6px",
+        fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace",
+        fontSize: "0.85rem",
+        fontWeight: 700,
+        letterSpacing: "0.75px",
+      }}
+    >
+      {user?.publicId || "N/A"}
+    </Box>
+  </TableCell>
+</TableRow>
+
+
               <TableRow>
                 <TableCell
                   sx={{
