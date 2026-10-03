@@ -36,7 +36,7 @@ const Profile = ({ onEdit }) => {
     if (user) {
       setFormData({
         name: user?.name || "",
-        phone: user?.phone || "",
+        phone: user?.phone ? String(user.phone) : "",
       });
     }
   }, [user]);
@@ -50,10 +50,9 @@ const Profile = ({ onEdit }) => {
   };
 
   const handleClose = () => {
-    // Reset form state to current user data on cancel
     setFormData({
       name: user?.name || "",
-      phone: user?.phone || "",
+      phone: user?.phone ? String(user.phone) : "",
     });
     setOpen(false);
   };
@@ -71,23 +70,24 @@ const Profile = ({ onEdit }) => {
     }
 
     const cleanName = String(formData.name || "").trim();
-    const cleanPhone = String(formData.phone || "").trim();
+    const cleanPhoneStr = String(formData.phone || "").trim();
 
-    if (!cleanName || !cleanPhone) {
+    if (!cleanName || !cleanPhoneStr) {
       alert("Name and Phone fields cannot be empty.");
       return;
     }
 
-    // --- Added Validation Checks ---
     if (cleanName.length > 40) {
       alert("Name cannot be more than 40 characters.");
       return;
     }
 
-    if (cleanPhone.length !== 10) {
-      alert("Phone number must be exactly 10 digits.");
+    if (cleanPhoneStr.length !== 10 || isNaN(cleanPhoneStr)) {
+      alert("Phone number must be exactly 10 digits and numeric.");
       return;
     }
+
+    const cleanPhone = Number(cleanPhoneStr); // Converted to Number for the schema
 
     try {
       dispatch(showLoading());
@@ -102,7 +102,6 @@ const Profile = ({ onEdit }) => {
       if (response.data.success) {
         const returnedUser = response.data.user || response.data.data;
 
-        // Merge old state with returned data to prevent setting undefined values
         const updatedState = {
           ...user,
           ...returnedUser,
@@ -110,9 +109,8 @@ const Profile = ({ onEdit }) => {
           phone: cleanPhone,
         };
 
-        dispatch(setUser(updatedState));
-        alert("Profile updated successfully!");
-        window.location.reload();
+        dispatch(setUser({ user: updatedState }));
+        alert("Profile updated successfully!"); 
         setOpen(false);
       } else {
         alert(response.data.message || "Failed to update profile.");
@@ -159,40 +157,38 @@ const Profile = ({ onEdit }) => {
             }}
           >
             <TableBody>
-
-            <TableRow>
-  <TableCell
-    sx={{
-      fontWeight: 500,
-      color: "#6B7280",
-      width: "40%",
-      borderBottom: "1px solid #E5E7EB",
-    }}
-  >
-    ID
-  </TableCell>
-  <TableCell sx={{ borderBottom: "1px solid #E5E7EB" }}>
-    <Box
-      component="span"
-      sx={{
-        display: "inline-block",
-        px: 1.5,
-        py: 0.5,
-        backgroundColor: "#EEF2FF", // Soft indigo highlight
-        color: "#4338CA", // Deep indigo text
-        border: "1px solid #C7D2FE",
-        borderRadius: "6px",
-        fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace",
-        fontSize: "0.85rem",
-        fontWeight: 700,
-        letterSpacing: "0.75px",
-      }}
-    >
-      {user?.publicId || "N/A"}
-    </Box>
-  </TableCell>
-</TableRow>
-
+              <TableRow>
+                <TableCell
+                  sx={{
+                    fontWeight: 500,
+                    color: "#6B7280",
+                    width: "40%",
+                    borderBottom: "1px solid #E5E7EB",
+                  }}
+                >
+                  ID
+                </TableCell>
+                <TableCell sx={{ borderBottom: "1px solid #E5E7EB" }}>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: "inline-block",
+                      px: 1.5,
+                      py: 0.5,
+                      backgroundColor: "#EEF2FF",
+                      color: "#4338CA",
+                      border: "1px solid #C7D2FE",
+                      borderRadius: "6px",
+                      fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.75px",
+                    }}
+                  >
+                    {user?.publicId || "N/A"}
+                  </Box>
+                </TableCell>
+              </TableRow>
 
               <TableRow>
                 <TableCell
@@ -262,10 +258,9 @@ const Profile = ({ onEdit }) => {
           </Table>
         </Box>
 
-        {/* Action Buttons */}
         <Stack direction="row" sx={{ width: "100%" }}>
           <Button
-            variant="primary"
+            variant="tertiary"
             size="sm"
             onClick={handleEditClick}
             sx={{
@@ -282,7 +277,6 @@ const Profile = ({ onEdit }) => {
         </Stack>
       </Card>
 
-      {/* Edit Profile Modal */}
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
         <DialogTitle>Edit Profile</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: "12px !important" }}>

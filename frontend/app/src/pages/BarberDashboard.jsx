@@ -1,8 +1,40 @@
-import React from 'react';
-import { Box, Typography, Card } from '@mui/material';
-import DashboardIcon from '@mui/icons-material/Dashboard';
+import React, { useEffect } from 'react';
+import { Box, Card } from '@mui/material';
 import WaitingList from '../components/WaitingList';
+import { io } from 'socket.io-client';
+
 const BarberDashboard = () => {
+  useEffect(() => {
+    // Retrieve logged-in user / barber info from localStorage (or Redux)
+    const userStorage = localStorage.getItem('user');
+    const barberUser = userStorage ? JSON.parse(userStorage) : null;
+    const barberId = barberUser?._id || barberUser?.id;
+
+    if (!barberId) {
+      console.warn("No barber ID found in localStorage. Real-time status sync skipped.");
+      return;
+    }
+
+    // Connect to backend socket and pass barberId in auth handshake
+    const socket = io("http://localhost:8080", {
+      auth: { barberId },
+      withCredentials: true,
+    });
+
+    socket.on("connect", () => {
+      console.log("Connected to socket server as barber:", barberId);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection failed:", err.message);
+    });
+
+    // Cleanup connection on unmount (logs the barber offline)
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   return (
     <Box
       sx={{

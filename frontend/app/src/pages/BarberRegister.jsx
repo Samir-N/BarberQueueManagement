@@ -26,6 +26,16 @@ import KeyIcon from '@mui/icons-material/Key';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
+const fieldSx = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '8px',
+    '& fieldset': { borderColor: '#E5E7EB' },
+    '&:hover fieldset': { borderColor: '#415A77' },
+    '&.Mui-focused fieldset': { borderColor: '#FFC300' },
+  },
+  '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
+};
+
 const BarberRegister = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -43,11 +53,23 @@ const BarberRegister = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "phone") {
+      const numericValue = value.replace(/\D/g, "").slice(0, 10);
+      setFormData((prev) => ({ ...prev, phone: numericValue }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (formData.phone.length !== 10) {
+      dispatch(showAlert({ message: "Please enter a valid 10-digit phone number.", type: "error" }));
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       dispatch(showAlert({ message: "Passwords do not match!", type: "error" }));
@@ -55,7 +77,7 @@ const BarberRegister = () => {
     }
 
     if (formData.role === 'barber' && !formData.barberSecretKey.trim()) {
-      dispatch(showAlert({ message: "Barber Secret Key is required for barber accounts!", type: "error" }));
+      dispatch(showAlert({ message: "Barber Secret Key is required!", type: "error" }));
       return;
     }
 
@@ -63,28 +85,27 @@ const BarberRegister = () => {
       dispatch(showLoading());
       const { confirmPassword, ...submitData } = formData;
       
-      // Clean up payload if registering as standard user
       if (submitData.role !== 'barber') {
         delete submitData.barberSecretKey;
       }
 
-      const response = await axios.post('/api/v1/user/register', submitData); 
+      const endpoint = submitData.role === 'barber' 
+        ? '/api/v1/barber/register' 
+        : '/api/v1/user/register';
+
+      const response = await axios.post(endpoint, submitData, {
+        withCredentials: true,
+      }); 
       dispatch(hideLoading());
 
       if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        dispatch(setUser({ 
-          user: response.data.user, 
-          token: response.data.token 
-        }));
+        // Save role in localStorage
+        localStorage.setItem("role", submitData.role);
+
+        dispatch(setUser({ user: response.data.user }));
         dispatch(showAlert({ message: "Registration Successful!", type: "success", duration: 2000 }));
         
-        // Redirect based on assigned role
-        if (response.data.user.role === 'barber') {
-          navigate('/barber/dashboard');
-        } else {
-          navigate('/user/dashboard');  
-        }
+        navigate(response.data.user.role === 'barber' ? '/barber/dashboard' : '/user/dashboard');
       } else {
         dispatch(showAlert({ message: response.data.message || "Registration failed!", type: "error" }));
       }
@@ -101,8 +122,7 @@ const BarberRegister = () => {
         placeItems: 'center',
         minHeight: 'calc(100vh - 64px)',
         width: '100%',
-        px: 2,
-        py: 2,
+        p: 2,
         boxSizing: 'border-box',
       }}
     >
@@ -117,38 +137,24 @@ const BarberRegister = () => {
           backgroundColor: '#FFFFFF',
         }}
       >
-        <Box sx={{ textAlign: 'center', mb: 2.5 }}>
+        <Box sx={{ textAlign: 'center', mb: 3 }}>
           <Box
             sx={{
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               backgroundColor: '#FFC300',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               mx: 'auto',
-              mb: 1.5,
+              mb: 1,
             }}
           >
-            <PersonAddIcon sx={{ fontSize: '24px', color: '#222222' }} />
+            <PersonAddIcon sx={{ fontSize: 22, color: '#222222' }} />
           </Box>
-          <Typography
-            sx={{
-              fontSize: '22px',
-              fontWeight: 600,
-              color: '#1B263B',
-            }}
-          >
+          <Typography sx={{ fontSize: '20px', fontWeight: 700, color: '#1B263B' }}>
             Create Account
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '14px',
-              color: '#6B7280',
-            }}
-          >
-            Sign up to get started
           </Typography>
         </Box>
 
@@ -165,19 +171,11 @@ const BarberRegister = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <PersonIcon sx={{ color: '#6B7280', fontSize: '20px' }} />
+                    <PersonIcon sx={{ color: '#6B7280', fontSize: 20 }} />
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  '& fieldset': { borderColor: '#E5E7EB' },
-                  '&:hover fieldset': { borderColor: '#415A77' },
-                  '&.Mui-focused fieldset': { borderColor: '#FFC300' },
-                },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
-              }}
+              sx={fieldSx}
             />
             
             <TextField
@@ -189,23 +187,19 @@ const BarberRegister = () => {
               value={formData.phone}
               onChange={handleChange}
               required
-              inputProps={{ minLength: 10 }}
+              inputProps={{ 
+                maxLength: 10, 
+                inputMode: 'numeric',
+                pattern: '[0-9]*'
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <PhoneIcon sx={{ color: '#6B7280', fontSize: '20px' }} />
+                    <PhoneIcon sx={{ color: '#6B7280', fontSize: 20 }} />
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  '& fieldset': { borderColor: '#E5E7EB' },
-                  '&:hover fieldset': { borderColor: '#415A77' },
-                  '&.Mui-focused fieldset': { borderColor: '#FFC300' },
-                },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
-              }}
+              sx={fieldSx}
             />
             
             <TextField
@@ -220,7 +214,7 @@ const BarberRegister = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <LockIcon sx={{ color: '#6B7280', fontSize: '20px' }} />
+                    <LockIcon sx={{ color: '#6B7280', fontSize: 20 }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -232,23 +226,15 @@ const BarberRegister = () => {
                       size="small"
                     >
                       {showPassword ? (
-                        <VisibilityOff sx={{ fontSize: '20px', color: '#6B7280' }} />
+                        <VisibilityOff sx={{ fontSize: 20, color: '#6B7280' }} />
                       ) : (
-                        <Visibility sx={{ fontSize: '20px', color: '#6B7280' }} />
+                        <Visibility sx={{ fontSize: 20, color: '#6B7280' }} />
                       )}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  '& fieldset': { borderColor: '#E5E7EB' },
-                  '&:hover fieldset': { borderColor: '#415A77' },
-                  '&.Mui-focused fieldset': { borderColor: '#FFC300' },
-                },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
-              }}
+              sx={fieldSx}
             />
 
             <TextField
@@ -263,7 +249,7 @@ const BarberRegister = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <LockIcon sx={{ color: '#6B7280', fontSize: '20px' }} />
+                    <LockIcon sx={{ color: '#6B7280', fontSize: 20 }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -275,44 +261,24 @@ const BarberRegister = () => {
                       size="small"
                     >
                       {showConfirmPassword ? (
-                        <VisibilityOff sx={{ fontSize: '20px', color: '#6B7280' }} />
+                        <VisibilityOff sx={{ fontSize: 20, color: '#6B7280' }} />
                       ) : (
-                        <Visibility sx={{ fontSize: '20px', color: '#6B7280' }} />
+                        <Visibility sx={{ fontSize: 20, color: '#6B7280' }} />
                       )}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  '& fieldset': { borderColor: '#E5E7EB' },
-                  '&:hover fieldset': { borderColor: '#415A77' },
-                  '&.Mui-focused fieldset': { borderColor: '#FFC300' },
-                },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
-              }}
+              sx={fieldSx}
             />
 
-            <FormControl 
-              fullWidth 
-              size="small"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  '& fieldset': { borderColor: '#E5E7EB' },
-                  '&:hover fieldset': { borderColor: '#415A77' },
-                  '&.Mui-focused fieldset': { borderColor: '#FFC300' },
-                },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
-              }}
-            >
-              <InputLabel id="role-label">Role</InputLabel>
+            <FormControl fullWidth size="small" sx={fieldSx}>
+              <InputLabel id="role-label">Account Role</InputLabel>
               <Select
                 labelId="role-label"
                 name="role"
                 value={formData.role}
-                label="Role"
+                label="Account Role"
                 onChange={handleChange}
               >
                 <MenuItem value="user">User</MenuItem>
@@ -320,7 +286,6 @@ const BarberRegister = () => {
               </Select>
             </FormControl>
 
-            {/* Conditional Barber Secret Key Field */}
             {formData.role === 'barber' && (
               <TextField
                 fullWidth
@@ -334,19 +299,11 @@ const BarberRegister = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <KeyIcon sx={{ color: '#6B7280', fontSize: '20px' }} />
+                      <KeyIcon sx={{ color: '#6B7280', fontSize: 20 }} />
                     </InputAdornment>
                   ),
                 }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    '& fieldset': { borderColor: '#E5E7EB' },
-                    '&:hover fieldset': { borderColor: '#415A77' },
-                    '&.Mui-focused fieldset': { borderColor: '#FFC300' },
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
-                }}
+                sx={fieldSx}
               />
             )}
 
@@ -355,17 +312,18 @@ const BarberRegister = () => {
               variant="contained"
               fullWidth
               sx={{
-                py: 1,
+                py: 1.1,
+                mt: 1,
                 fontSize: '15px',
                 fontWeight: 600,
                 textTransform: 'none',
                 borderRadius: '8px',
                 backgroundColor: '#FFC300',
                 color: '#222222',
-                boxShadow: '0 4px 12px rgba(255, 195, 0, 0.3)',
+                boxShadow: 'none',
                 '&:hover': {
                   backgroundColor: '#E6B000',
-                  boxShadow: '0 6px 16px rgba(255, 195, 0, 0.4)',
+                  boxShadow: '0 4px 12px rgba(255, 195, 0, 0.3)',
                 },
               }}
             >
@@ -374,23 +332,28 @@ const BarberRegister = () => {
           </Stack>
         </form>
 
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography sx={{ fontSize: '14px', color: '#6B7280' }}>
-            Already have an account?{' '}
-            <Typography
-              component="span"
-              onClick={() => navigate('/barber/login')}
-              sx={{
-                color: '#1B263B',
-                fontWeight: 600,
-                cursor: 'pointer',
-                '&:hover': { color: '#FFC300' },
-              }}
-            >
-              Log In
-            </Typography>
-          </Typography>
-        </Box>
+        <Typography 
+          sx={{ 
+            mt: 2.5, 
+            textAlign: 'center', 
+            fontSize: '13px', 
+            color: '#6B7280' 
+          }}
+        >
+          Already have an account?{' '}
+          <Box
+            component="span"
+            onClick={() => navigate('/barber/login')}
+            sx={{
+              color: '#1B263B',
+              fontWeight: 600,
+              cursor: 'pointer',
+              '&:hover': { color: '#E6B000', textDecoration: 'underline' },
+            }}
+          >
+            Log In
+          </Box>
+        </Typography>
       </Card>
     </Box>
   );

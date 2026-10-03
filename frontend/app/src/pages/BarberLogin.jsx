@@ -7,7 +7,8 @@ import {
   Card, 
   Stack, 
   InputAdornment, 
-  IconButton 
+  IconButton,
+  MenuItem 
 } from "@mui/material";
 import axios from "axios";
 import { useDispatch } from "react-redux";
@@ -24,37 +25,79 @@ import LockIcon from '@mui/icons-material/Lock';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-const BarberLogin = () => {
+const UnifiedLogin = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     phone: "",
     password: "",
+    role: "user",
   });
 
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "phone") {
+      const numericValue = value.replace(/\D/g, "").slice(0, 10);
+      setFormData((prev) => ({ ...prev, phone: numericValue }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (formData.phone.length !== 10) {
+      dispatch(
+        showAlert({
+          message: "Please enter a valid 10-digit phone number.",
+          type: "error",
+        })
+      );
+      return;
+    }
+
     try {
       dispatch(showLoading());
-      const response = await axios.post("/api/v1/user/login", formData);
+
+      const endpoint = formData.role === "barber" 
+        ? "/api/v1/barber/login" 
+        : "/api/v1/user/login";
+
+      const response = await axios.post(endpoint, formData, {
+        withCredentials: true,
+      });
+
       dispatch(hideLoading());
 
       if (response.data.success) {
-        localStorage.setItem("token", response.data.token);
-        dispatch(setUser({ 
-          user: response.data.user, 
-          token: response.data.token,
-          isAuthenticated: true
-        }));
-        dispatch(showAlert({ message: "Login Successful", type: "success", duration: 2000 }));
-        navigate("/");
+        const loggedInUser = response.data.user || response.data.barber || response.data.data;
+
+        // Save only role to localStorage
+        localStorage.setItem("role", formData.role);
+
+        dispatch(
+          setUser({
+            user: loggedInUser,
+            token: response.data.token || null,
+          })
+        );
+
+        dispatch(
+          showAlert({ 
+            message: "Login Successful", 
+            type: "success", 
+            duration: 2000 
+          })
+        );
+
+        
+          navigate("/");
+        
       } else {
         dispatch(
           showAlert({
@@ -65,7 +108,12 @@ const BarberLogin = () => {
       }
     } catch (error) {
       dispatch(hideLoading());
-      dispatch(showAlert({ message: "Something went wrong!", type: "error" }));
+      dispatch(
+        showAlert({ 
+          message: error.response?.data?.message || "Something went wrong!", 
+          type: "error" 
+        })
+      );
     }
   };
 
@@ -107,27 +155,37 @@ const BarberLogin = () => {
           >
             <LoginIcon sx={{ fontSize: '24px', color: '#222222' }} />
           </Box>
-          <Typography
-            sx={{
-              fontSize: '22px',
-              fontWeight: 600,
-              color: '#1B263B',
-            }}
-          >
+          <Typography sx={{ fontSize: '22px', fontWeight: 600, color: '#1B263B' }}>
             Welcome Back
           </Typography>
-          <Typography
-            sx={{
-              fontSize: '14px',
-              color: '#6B7280',
-            }}
-          >
+          <Typography sx={{ fontSize: '14px', color: '#6B7280' }}>
             Sign in to continue
           </Typography>
         </Box>
 
         <form onSubmit={handleSubmit}>
           <Stack spacing={2}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Login As"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  '& fieldset': { borderColor: '#E5E7EB' },
+                  '&:hover fieldset': { borderColor: '#415A77' },
+                  '&.Mui-focused fieldset': { borderColor: '#FFC300' },
+                },
+              }}
+            >
+              <MenuItem value="user">User</MenuItem>
+              <MenuItem value="barber">Barber</MenuItem>
+            </TextField>
+
             <TextField
               fullWidth
               size="small"
@@ -137,7 +195,11 @@ const BarberLogin = () => {
               value={formData.phone}
               onChange={handleChange}
               required
-              inputProps={{ minLength: 10 }}
+              inputProps={{ 
+                maxLength: 10, 
+                inputMode: 'numeric',
+                pattern: '[0-9]*'
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -152,7 +214,6 @@ const BarberLogin = () => {
                   '&:hover fieldset': { borderColor: '#415A77' },
                   '&.Mui-focused fieldset': { borderColor: '#FFC300' },
                 },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
               }}
             />
 
@@ -195,7 +256,6 @@ const BarberLogin = () => {
                   '&:hover fieldset': { borderColor: '#415A77' },
                   '&.Mui-focused fieldset': { borderColor: '#FFC300' },
                 },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#1B263B' },
               }}
             />
 
@@ -212,37 +272,16 @@ const BarberLogin = () => {
                 backgroundColor: '#FFC300',
                 color: '#222222',
                 boxShadow: '0 4px 12px rgba(255, 195, 0, 0.3)',
-                '&:hover': {
-                  backgroundColor: '#E6B000',
-                  boxShadow: '0 6px 16px rgba(255, 195, 0, 0.4)',
-                },
+                '&:hover': { backgroundColor: '#E6B000' },
               }}
             >
               Log In
             </Button>
           </Stack>
         </form>
-
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography sx={{ fontSize: '14px', color: '#6B7280' }}>
-            Don't have an account?{' '}
-            <Typography
-              component="span"
-              onClick={() => navigate('/barber/register')}
-              sx={{
-                color: '#1B263B',
-                fontWeight: 600,
-                cursor: 'pointer',
-                '&:hover': { color: '#FFC300' },
-              }}
-            >
-              Register
-            </Typography>
-          </Typography>
-        </Box>
       </Card>
     </Box>
   );
 };
 
-export default BarberLogin;
+export default UnifiedLogin;

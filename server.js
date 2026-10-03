@@ -2,6 +2,8 @@ const express = require("express");
 const colors = require("colors");
 const morgan = require("morgan");
 const dotenv = require("dotenv");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const connectDB = require("./config/Database.js");
 const { Server } = require("socket.io");
 const http = require("http");
@@ -15,20 +17,31 @@ connectDB();
 // Express app
 const app = express();
 
-// Middlewares
+// 1. Enable CORS for Express HTTP requests with credentials
+app.use(
+  cors({
+    origin: "http://localhost:5173", // Must match your React frontend URL exactly (no trailing slash)
+    credentials: true,               // Allows browser to receive and send HttpOnly cookies
+  })
+);
+
+// 2. Parse incoming cookies into req.cookies
+app.use(cookieParser());
+
+// 3. Middlewares
 app.use(morgan("dev"));
 app.use(express.json());
 
-// Routes
-app.use("/api/v1/user", require("./routes/userRoute.js"));
+// 4. Routes (Ensure both user and barber routes are mounted)
+app.use("/api/v1", require("./routes/userRoute.js"));
 
 // Create HTTP server (for both Express and Socket.IO)
 const httpServer = http.createServer(app);
 
-// Socket.IO setup (Declared ONLY ONCE)
+// Socket.IO setup
 const io = require("socket.io")(httpServer, {
   cors: {
-    origin: "http://localhost:5173", // Replace with your frontend URL (or use "*" for development)
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"],
     credentials: true,
   },

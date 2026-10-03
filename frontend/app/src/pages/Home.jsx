@@ -2,10 +2,10 @@ import { useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Typography, Container } from '@mui/material';
+import { Box, Typography, Container, Paper, Stack } from '@mui/material';
 
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import ListAltIcon from '@mui/icons-material/ListAlt';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 import Booking from '../components/Booking';
@@ -70,102 +70,123 @@ const Home = () => {
     waitingListRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // ✅ Show spinner until both user object and role are present
   if (!user || !user.role) {
     return <Spinner />;
   }
 
-  const role = user.role.toLowerCase();
-
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: '#F8FAFC' }}>
-      <Box
-        sx={{
-          minHeight: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          px: { xs: 2, sm: 3, md: 4 },
-          py: 6,
-          maxWidth: '1200px',
-          mx: 'auto',
-          position: 'relative',
-        }}
-      >
+    <Box
+      sx={{
+        width: '100%',
+        minHeight: '100vh',
+        bgcolor: '#F8FAFC',
+        py: { xs: 3, sm: 6 },
+      }}
+    >
+      <Container maxWidth="sm">
         {isVisible ? (
           <Booking />
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
-            <Box sx={{ mb: 4, maxWidth: '800px' }}>
-              <Typography sx={{ fontSize: { xs: '46px', sm: '62px', md: '74px' }, fontWeight: 300, color: '#0F172A', mb: 1.5 }}>
-                Welcome{user?.name ? `, ${user.name}` : ''}
-              </Typography>
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 3, sm: 4 },
+              borderRadius: 3,
+              bgcolor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)',
+              textAlign: 'center',
+              mb: 3,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                color: '#0F172A',
+                mb: 2.5,
+                fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Welcome{user?.name ? `, ${user.name}` : ''}
+            </Typography>
 
-              <Typography sx={{ fontSize: { xs: '15px', sm: '18px' }, color: '#475569', maxWidth: '560px', mx: 'auto' }}>
-                {role === 'user'
-                  ? 'Book your appointment in seconds. Select your preferred service.'
-                  : 'Manage daily schedules, barber queues, and client appointments.'}
-              </Typography>
-            </Box>
-
-            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5 }}>
-              {/* ✅ Explicit check for user vs barber/admin */}
-
-               <RoleGuard allowedRoles={["user"]}>
+            <RoleGuard allowedRoles={['user']}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1.5}
+                justifyContent="center"
+                alignItems="center"
+                sx={{ width: '100%' }}
+              >
                 <Button
                   variant="primary"
-                  size="lg"
                   onClick={() => dispatch(toggleBooking())}
-                  className="w-full max-w-[320px] gap-2 shadow-sm hover:shadow transition-all"
+                  className="w-full h-12 justify-center gap-2 text-sm font-semibold shadow-xs"
                 >
                   <CalendarTodayIcon className="!text-[18px]" />
-                  Book an Appointment
+                  <span>Book Appointment</span>
                 </Button>
-              </RoleGuard>
-
-                            <RoleGuard allowedRoles={["barber"]}>
 
                 <Button
                   variant="secondary"
-                  size="lg"
-                  onClick={() => navigate('/barber/dashboard')}
-                  className="w-full max-w-[320px] gap-2 shadow-sm hover:shadow transition-all"
+                  onClick={() => navigate('/user/dashboard')}
+                  className="w-full h-12 justify-center gap-2 text-sm font-semibold shadow-xs"
                 >
-                  <ListAltIcon className="!text-[18px]" />
-                  Manage Bookings
+                  <DashboardIcon className="!text-[18px]" />
+                  <span>Dashboard</span>
                 </Button>
-                          </RoleGuard>
+              </Stack>
+            </RoleGuard>
 
-
-              <RoleGuard allowedRoles={["user"]}>
-                <Box
-                  onClick={handleScrollToWaitingList}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    cursor: 'pointer',
-                    color: '#64748B',
-                    '&:hover': { color: '#0F172A', transform: 'translateY(2px)' },
-                  }}
+            <RoleGuard allowedRoles={['barber']}>
+              <Box sx={{ width: '100%' }}>
+                <Button
+                  variant="primary"
+                  onClick={() => navigate('/barber/dashboard')}
+                  className="w-full h-12 justify-center gap-2 text-sm font-semibold shadow-xs"
                 >
-                  <Typography sx={{ fontSize: '14px', fontWeight: 500 }}>
-                    View waiting list
-                  </Typography>
-                  <KeyboardArrowDownIcon sx={{ fontSize: 20 }} />
-                </Box>
-              </RoleGuard>
-            </Box>
-          </Box>
-        )}
-      </Box>
+                  <DashboardIcon className="!text-[18px]" />
+                  <span>Barber Dashboard</span>
+                </Button>
+              </Box>
+            </RoleGuard>
 
-      <RoleGuard allowedRoles={["user"]}>
-        <Container ref={waitingListRef} maxWidth="lg" sx={{ pb: { xs: 8, md: 10 }, px: { xs: 2, sm: 3 } }}>
-          <WaitingList />
-        </Container>
-      </RoleGuard>
+            <RoleGuard allowedRoles={['user']}>
+              <Box
+                onClick={handleScrollToWaitingList}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  mt: 2.5,
+                  px: 2,
+                  py: 0.7,
+                  borderRadius: '20px',
+                  bgcolor: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  cursor: 'pointer',
+                  color: '#475569',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { color: '#0F172A', bgcolor: '#F1F5F9' },
+                }}
+              >
+                <span>View Live Queue</span>
+                <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
+              </Box>
+            </RoleGuard>
+          </Paper>
+        )}
+
+        <RoleGuard allowedRoles={['user']}>
+          <Box ref={waitingListRef}>
+            <WaitingList />
+          </Box>
+        </RoleGuard>
+      </Container>
     </Box>
   );
 };

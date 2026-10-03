@@ -29,54 +29,52 @@ import axios from "axios";
 import dayjs from "dayjs";
 
 const PersonalBookings = () => {
-  const { personalBooking } = useSelector((state) => state.booking);
+  const { personalBooking, isVisible } = useSelector((state) => state.booking);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const dispatch = useDispatch();
-  const token = localStorage.getItem("token");
 
-  const isVisible = useSelector((state) => state.booking.isVisible);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   useEffect(() => {
     const fetchPersonalBooking = async () => {
       try {
         dispatch(showLoading());
-        const res = await axios.post(
-          "/api/v1/user/personalBookings",
-          {},
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        if (res.data.success) {
+        const res = await axios.post("/api/v1/user/personalBookings");
+
+        if (res.data?.success && res.data?.data) {
           dispatch(insertPersonalBooking(res.data.data));
         } else {
           dispatch(clearPersonalBooking());
         }
-        dispatch(hideLoading());
       } catch (err) {
-        dispatch(hideLoading());
         console.error("Error fetching personal booking:", err);
         dispatch(clearPersonalBooking());
+      } finally {
+        dispatch(hideLoading());
       }
     };
 
-    if (token) fetchPersonalBooking();
-  }, [dispatch, token]);
+    fetchPersonalBooking();
+  }, [dispatch]);
 
   const handleDelete = async () => {
+    if (!personalBooking?._id) return;
+
     try {
-      await axios.delete(
-        `/api/v1/user/personalBooking/delete/${personalBooking._id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      dispatch(showLoading());
+      const res = await axios.delete(
+        `/api/v1/user/personalBooking/delete/${personalBooking._id}`
       );
-      dispatch(clearPersonalBooking());
-      setOpenDeleteDialog(false);
-      alert("Booking deleted successfully.");
+
+      if (res.data?.success) {
+        dispatch(clearPersonalBooking());
+        setOpenDeleteDialog(false);
+      }
     } catch (err) {
       console.error("Error deleting booking:", err);
-      alert("Failed to delete booking. Please try again.");
+    } finally {
+      dispatch(hideLoading());
     }
   };
 
@@ -122,7 +120,7 @@ const PersonalBookings = () => {
   return (
     <Box sx={{ width: "100%" }}>
       <Box sx={{ width: "100%" }}>
-        {isVisible && (
+        {isVisible ? (
           <Card
             sx={{
               borderRadius: 2,
@@ -135,9 +133,7 @@ const PersonalBookings = () => {
           >
             <EditBooking />
           </Card>
-        )}
-
-        {!isVisible && (
+        ) : (
           <Card
             sx={{
               borderRadius: 2,

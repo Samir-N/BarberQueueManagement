@@ -1,25 +1,13 @@
-import React from 'react'
-import { Navigate } from 'react-router-dom'
-import { Outlet } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+// components/PrivateRoutes.jsx
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
+import { useSelector } from "react-redux";
 
-function PrivateRoutes() {
+const PrivateRoutes = () => {
+  const { user } = useSelector((state) => state.auth);
 
-    const {user} = useSelector((state) => state.auth);
-    
-    try{
+  // Simply check if user exists. Do NOT check alert.loading here!
+  return user ? <Outlet /> : <Navigate to="/barber/login" replace />;
+};
 
-        const response = 'api/v1/user/getUserData'
-
-    }
-    catch(e){console.log(e)}
-
-    if(localStorage.getItem("token")){
-        return  <Outlet />
-    }
-    else{
-        return <Navigate to="/barber/login" />
-    }
-}
-
-export default PrivateRoutes
+export default PrivateRoutes;

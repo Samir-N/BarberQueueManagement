@@ -26,6 +26,17 @@ import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 
+const harvardKeyframes = {
+  '@keyframes harvardDrawerFade': {
+    '0%': { opacity: 0 },
+    '100%': { opacity: 1 },
+  },
+  '@keyframes harvardTextSlide': {
+    '0%': { opacity: 0, transform: 'translateY(-24px)' },
+    '100%': { opacity: 1, transform: 'translateY(0)' },
+  },
+};
+
 const Navbar = () => {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -42,7 +53,6 @@ const Navbar = () => {
 
   const handleLogout = () => {
     dispatch(clearUser());
-    localStorage.removeItem('token');
     setMobileOpen(false);
     navigate('/barber/login');
   };
@@ -55,15 +65,7 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
   const dashboardPath = user?.role === 'barber' ? '/barber/dashboard' : '/user/dashboard';
 
-  const getPageTitle = () => {
-    if (location.pathname === '/') return 'Home';
-    if (location.pathname === dashboardPath) return 'Dashboard';
-    if (location.pathname === '/barber/login') return 'Log In';
-    if (location.pathname === '/barber/register') return 'Register';
-    return 'Barber App';
-  };
-
-  // FULL SCREEN MOBILE DRAWER CONTENT
+  // Full screen mobile drawer content
   const drawerContent = (
     <Box 
       sx={{ 
@@ -75,6 +77,8 @@ const Navbar = () => {
         color: '#0F172A',
         p: 3,
         boxSizing: 'border-box',
+        animation: 'harvardDrawerFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        ...harvardKeyframes,
       }}
     >
       {/* Header */}
@@ -85,12 +89,23 @@ const Navbar = () => {
           justifyContent: 'space-between',
           pb: 2,
           borderBottom: '1px solid rgba(15, 23, 42, 0.12)',
+          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both',
         }}
       >
-        <Typography sx={{ fontSize: '20px', fontWeight: 600, color: '#0F172A' }}>
+        <Typography 
+          onClick={() => handleNavigation('/')}
+          sx={{ fontSize: '20px', fontWeight: 600, color: '#0F172A', cursor: 'pointer' }}
+        >
           Barber App
         </Typography>
-        <IconButton onClick={handleDrawerToggle} sx={{ color: '#0F172A' }}>
+        <IconButton 
+          onClick={handleDrawerToggle} 
+          sx={{ 
+            color: '#0F172A',
+            transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            '&:hover': { transform: 'rotate(90deg) scale(1.1)' }
+          }}
+        >
           <CloseIcon sx={{ fontSize: '28px' }} />
         </IconButton>
       </Box>
@@ -99,16 +114,21 @@ const Navbar = () => {
       <List sx={{ pt: 2, flexGrow: 1 }}>
         {user && (
           <>
-            <ListItem disablePadding>
+            <ListItem 
+              disablePadding 
+              sx={{ animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both' }}
+            >
               <ListItemButton
                 onClick={() => handleNavigation('/')}
                 selected={isActive('/')}
                 sx={{
                   py: 1.8,
                   px: 2,
-                  borderRadius: 1,
+                  borderRadius: 1.5,
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.08)' },
                   '&.Mui-selected': {
-                    backgroundColor: 'rgba(15, 23, 42, 0.12)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.15)',
                     '& .MuiListItemIcon-root, & .MuiTypography-root': { color: '#0F172A', fontWeight: 600 },
                   },
                 }}
@@ -120,16 +140,21 @@ const Navbar = () => {
               </ListItemButton>
             </ListItem>
 
-            <ListItem disablePadding sx={{ mt: 1 }}>
+            <ListItem 
+              disablePadding 
+              sx={{ mt: 1, animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both' }}
+            >
               <ListItemButton
                 onClick={() => handleNavigation(dashboardPath)}
                 selected={isActive(dashboardPath)}
                 sx={{
                   py: 1.8,
                   px: 2,
-                  borderRadius: 1,
+                  borderRadius: 1.5,
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.08)' },
                   '&.Mui-selected': {
-                    backgroundColor: 'rgba(15, 23, 42, 0.12)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.15)',
                     '& .MuiListItemIcon-root, & .MuiTypography-root': { color: '#0F172A', fontWeight: 600 },
                   },
                 }}
@@ -144,10 +169,21 @@ const Navbar = () => {
         )}
       </List>
 
-      <Divider sx={{ borderColor: 'rgba(15, 23, 42, 0.12)', my: 2 }} />
+      <Divider 
+        sx={{ 
+          borderColor: 'rgba(15, 23, 42, 0.12)', 
+          my: 2, 
+          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.24s both' 
+        }} 
+      />
 
-      {/* Auth Buttons */}
-      <Box sx={{ pb: 2 }}>
+      {/* Auth Actions */}
+      <Box 
+        sx={{ 
+          pb: 2, 
+          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both' 
+        }}
+      >
         {user ? (
           <Button
             variant="secondary"
@@ -167,11 +203,13 @@ const Navbar = () => {
               sx={{ 
                 width: '100%', 
                 justifyContent: 'center',
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
                 color: '#0F172A',
                 border: '1px solid #0F172A',
                 fontSize: '16px',
-                py: 1.2
+                py: 1.2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': { backgroundColor: '#FFFFFF' }
               }}
             >
               <AppRegistrationIcon sx={{ fontSize: '20px', mr: 1 }} />
@@ -188,6 +226,8 @@ const Navbar = () => {
                 color: '#FFFFFF',
                 fontSize: '16px',
                 py: 1.2,
+                boxShadow: '0 4px 6px rgba(15, 23, 42, 0.2)',
+                '&:hover': { backgroundColor: '#1E293B' }
               }}
             >
               <LoginIcon sx={{ fontSize: '20px', mr: 1 }} />
@@ -199,7 +239,7 @@ const Navbar = () => {
     </Box>
   );
 
-  // MOBILE TOP BAR
+  // Mobile View
   if (isMobile) {
     return (
       <>
@@ -218,35 +258,51 @@ const Navbar = () => {
             zIndex: 1100,
           }}
         >
-          {/* Page Title Far Left */}
           <Typography
-            onClick={() => handleNavigation('/')}
-            sx={{ fontSize: '18px', fontWeight: 500, color: '#0F172A', cursor: 'pointer' }}
+            onClick={() => navigate('/')}
+            sx={{ fontSize: '18px', fontWeight: 600, color: '#0F172A', cursor: 'pointer' }}
           >
-            {getPageTitle()}
+            Barber App
           </Typography>
 
-          {/* Hamburger Locked to Far Right via ml: 'auto' */}
           <IconButton 
             onClick={handleDrawerToggle} 
-            sx={{ ml: 'auto', color: '#0F172A', p: 1 }}
+            sx={{ 
+              ml: 'auto', 
+              color: '#0F172A', 
+              p: 1,
+              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              '&:hover': { transform: 'scale(1.1)' }
+            }}
           >
             <MenuIcon sx={{ fontSize: '28px' }} />
           </IconButton>
         </Box>
 
-        {/* Drawer Anchor Set to Right */}
         <Drawer
-          anchor="right"
+          anchor="top"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
+          transitionDuration={{ enter: 400, exit: 300 }}
+          ModalProps={{ 
+            keepMounted: true,
+            slotProps: {
+              backdrop: {
+                sx: {
+                  backgroundColor: 'rgba(15, 23, 42, 0.5)',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                }
+              }
+            }
+          }}
           PaperProps={{
             sx: {
               width: '100%',
-              maxWidth: '100%',
-              height: '100%',
+              height: '100dvh',
               backgroundColor: '#FFC300',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+              backgroundImage: 'none',
             },
           }}
         >
@@ -256,7 +312,7 @@ const Navbar = () => {
     );
   }
 
-  // DESKTOP TOP BAR
+  // Desktop View
   return (
     <Box
       sx={{
@@ -273,7 +329,7 @@ const Navbar = () => {
         zIndex: 1100,
       }}
     >
-      {/* Left Column (Logo) */}
+      {/* Brand */}
       <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
         <Typography
           onClick={() => navigate('/')}
@@ -290,7 +346,7 @@ const Navbar = () => {
         </Typography>
       </Box>
 
-      {/* Middle Column (Center Links) */}
+      {/* Nav Links */}
       <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 1.5 }}>
         {user && (
           <>
@@ -305,6 +361,9 @@ const Navbar = () => {
                 fontSize: '16px',
                 position: 'relative',
                 px: 2,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
                 '&::after': isActive('/') ? {
                   content: '""',
                   position: 'absolute',
@@ -318,6 +377,7 @@ const Navbar = () => {
                 } : {},
               }}
             >
+              <HomeIcon sx={{ fontSize: '20px' }} />
               Home
             </Button>
 
@@ -332,6 +392,9 @@ const Navbar = () => {
                 fontSize: '16px',
                 position: 'relative',
                 px: 2,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
                 '&::after': isActive(dashboardPath) ? {
                   content: '""',
                   position: 'absolute',
@@ -345,20 +408,27 @@ const Navbar = () => {
                 } : {},
               }}
             >
+              <DashboardIcon sx={{ fontSize: '20px' }} />
               Dashboard
             </Button>
           </>
         )}
       </Box>
 
-      {/* Right Column (Auth Buttons) */}
+      {/* Auth Actions */}
       <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
         {user ? (
           <Button
             variant="tertiary"
             size="sm"
             onClick={handleLogout}
-            sx={{ fontWeight: 500, fontSize: '16px' }}
+            sx={{ 
+              fontWeight: 500, 
+              fontSize: '16px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
           >
             <LogoutIcon sx={{ fontSize: '20px' }} />
             Log Out
@@ -369,7 +439,13 @@ const Navbar = () => {
               variant="tertiary"
               size="sm"
               onClick={() => navigate('/barber/register')}
-              sx={{ fontWeight: 500, fontSize: '16px' }}
+              sx={{ 
+                fontWeight: 500, 
+                fontSize: '16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+              }}
             >
               <AppRegistrationIcon sx={{ fontSize: '20px' }} />
               Register
@@ -378,7 +454,13 @@ const Navbar = () => {
               variant="primary"
               size="sm"
               onClick={() => navigate('/barber/login')}
-              sx={{ fontWeight: 500, fontSize: '16px' }}
+              sx={{ 
+                fontWeight: 500, 
+                fontSize: '16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+              }}
             >
               <LoginIcon sx={{ fontSize: '20px' }} />
               Log In

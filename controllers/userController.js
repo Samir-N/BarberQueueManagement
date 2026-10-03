@@ -1,7 +1,8 @@
 const userModel = require('../models/userModels.js');
+const barberModel = require('../models/barberModel.js');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto'); // Fixed: Added missing import
+const crypto = require('crypto');
 
 const getJwtSecret = () => {
   const secret = process.env.SECRET_KEY;
@@ -11,58 +12,66 @@ const getJwtSecret = () => {
   return secret;
 };
 
-// Public ID generator
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 3600000, // 1 hour
+};
+
 const generatePublicId = (length = 5) => {
   const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const bytes = new Uint8Array(length);
-  crypto.webcrypto.getRandomValues(bytes);
-
+  const bytes = crypto.randomBytes(length);
   return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
 };
 
+// User Login Controller
 const loginController = async (req, res) => {
   try {
     const { phone, password } = req.body;
-    
+
     if (!phone || !password) {
       return res.status(400).send({
         message: "Phone and password are required",
         success: false
       });
     }
-    
-    const user = await userModel.findOne({ phone });
+
+    const cleanPhone = String(phone).trim();
+    const user = await userModel.findOne({ phone: cleanPhone });
     if (!user) {
-      return res.status(200).send({
+      return res.status(404).send({
         message: "User not found",
         success: false
       });
     }
-    
-    // Async compare prevents blocking the Node event loop
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(200).send({
+      return res.status(401).send({
         message: "Invalid Phone or Password",
         success: false
       });
     }
-    
+
     const safeUser = {
       _id: user._id,
       id: user._id,
       publicId: user.publicId,
       name: user.name,
       phone: user.phone,
-      role: user.role,
+      role: user.role || "user",
     };
 
     const secretKey = getJwtSecret();
     const token = jwt.sign(
-      { userId: user._id, phone: user.phone },
+      { userId: user._id, id: user._id, role: safeUser.role, phone: user.phone },
       secretKey,
       { expiresIn: "1h" }
     );
+
+    res.cookie("token", token, cookieOptions);
 
     res.status(200).send({
       user: safeUser,
@@ -81,38 +90,35 @@ const loginController = async (req, res) => {
   }
 };
 
+// User Register Controller
 const registerController = async (req, res) => {
   try {
-    const { name, phone, password, role, barberSecretKey} = req.body;
+    const { name, phone, password } = req.body;
 
-    if (!name || !phone || !password || !role) {
+    if (!name || !phone || !password) {
       return res.status(400).send({
-        message: "All fields (name, phone, password, role) are required",
+        message: "All fields (name, phone, password) are required",
         success: false
       });
     }
-if (role !== "user") {
-  const envKey = process.env.BARBER_SECRET_KEY ? String(process.env.BARBER_SECRET_KEY).trim() : null;
-  const providedKey = barberSecretKey ? String(barberSecretKey).trim() : null;
 
-  if (!providedKey || providedKey !== envKey) {
-    return res.status(400).send({
-      success: false,
-      message: "Invalid or missing Barber Secret Key",
-    });
-  }
-}
+    const cleanPhone = String(phone).trim();
+    if (cleanPhone.length !== 10) {
+      return res.status(400).send({
+        message: "Phone number must be exactly 10 digits",
+        success: false,
+      });
+    }
 
-    // Check existing user FIRST before doing publicId DB checks
-    const existingUser = await userModel.findOne({ phone });
-    if (existingUser) {
-      return res.status(200).send({
+    const existingUser = await userModel.findOne({ phone: cleanPhone });
+    const existingBarber = await barberModel.findOne({ phone: cleanPhone });
+    if (existingUser || existingBarber) {
+      return res.status(400).send({
         message: "User already exists",
         success: false
       });
     }
 
-    // Generate unique public ID
     let publicId;
     do {
       publicId = generatePublicId();
@@ -123,9 +129,9 @@ if (role !== "user") {
 
     const newUser = new userModel({
       name,
-      phone,
+      phone: cleanPhone,
       password: hashedPassword,
-      role,
+      role: "user",
       publicId,
     });
     await newUser.save();
@@ -141,10 +147,12 @@ if (role !== "user") {
 
     const secretKey = getJwtSecret();
     const token = jwt.sign(
-      { userId: newUser._id, phone: newUser.phone },
+      { userId: newUser._id, id: newUser._id, role: newUser.role, phone: newUser.phone },
       secretKey,
       { expiresIn: "1h" }
     );
+
+    res.cookie("token", token, cookieOptions);
 
     res.status(201).send({
       message: "Register successful",
@@ -155,6 +163,7 @@ if (role !== "user") {
     });
 
   } catch (error) {
+    console.error("Error in register controller:", error);
     res.status(500).send({
       message: "Error in register controller",
       error: error.message,
@@ -163,25 +172,34 @@ if (role !== "user") {
   }
 };
 
+// Fetch Single User Data Controller (/api/v1/user/getUserData)
 const authController = async (req, res) => {
   try {
-    const { userId } = req.body;
-    const user = await userModel.findById(userId);
-    
-    if (!user) {        
-      return res.status(200).send({
+    const userId = req.body.userId || req.userId;
+
+    if (!userId) {
+      return res.status(400).send({
+        message: "User ID is required",
+        success: false
+      });
+    }
+
+    const user = await userModel.findById(userId).select('-password');
+
+    if (!user) {
+      return res.status(404).send({
         message: "User not found",
         success: false
       });
-    } 
-    
+    }
+
     const safeUser = {
       _id: user._id,
       id: user._id,
-      publicId: user.publicId,
+      publicId: user.publicId || null,
       name: user.name,
       phone: user.phone,
-      role: user.role,
+      role: user.role || "user",
     };
 
     res.status(200).send({
@@ -191,14 +209,16 @@ const authController = async (req, res) => {
       user: safeUser
     });
   } catch (error) {
-    res.status(500).send({        
-      message: "Error in auth controller",        
-      error: error.message,        
-      success: false    
+    console.error('Error in auth controller:', error);
+    res.status(500).send({
+      message: "Error in auth controller",
+      error: error.message,
+      success: false
     });
-  }   
+  }
 };
 
+// Profile Edit Controller
 const handleProfileEdit = async (req, res) => {
   try {
     const { name, phone } = req.body;
@@ -211,26 +231,33 @@ const handleProfileEdit = async (req, res) => {
       });
     }
 
-    if (phone.length !== 10) {
+    const cleanPhone = String(phone).trim();
+    if (cleanPhone.length !== 10) {
       return res.status(400).send({
         message: "Phone number must be exactly 10 digits",
         success: false,
       });
     }
 
-    const existingPhoneUser = await userModel.findOne({ phone, _id: { $ne: id } });
-    if (existingPhoneUser) {
+    // Check if phone number is registered to another user or any barber
+    const existingPhoneUser = await userModel.findOne({
+      phone: cleanPhone,
+      _id: { $ne: id },
+    });
+    const existingPhoneBarber = await barberModel.findOne({ phone: cleanPhone });
+
+    if (existingPhoneUser || existingPhoneBarber) {
       return res.status(400).send({
-        message: "Phone number is already registered to another user",
+        message: "Phone number is already registered to another account",
         success: false,
       });
     }
-    
+
     const updatedUser = await userModel.findByIdAndUpdate(
       id,
-      { name, phone },
+      { name, phone: cleanPhone },
       { new: true, runValidators: true }
-    );
+    ).select('-password');
 
     if (!updatedUser) {
       return res.status(404).send({
@@ -242,15 +269,11 @@ const handleProfileEdit = async (req, res) => {
     const safeUser = {
       _id: updatedUser._id,
       id: updatedUser._id,
-      publicId: updatedUser.publicId,
+      publicId: updatedUser.publicId || null,
       name: updatedUser.name,
       phone: updatedUser.phone,
       role: updatedUser.role,
     };
-
-    
-
-
 
     return res.status(200).send({
       message: "Profile updated successfully",
