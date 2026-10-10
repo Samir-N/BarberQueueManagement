@@ -1,7 +1,10 @@
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:8080", {
+const VITE_SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "https://barber-queue-api.onrender.com";
+
+const socket = io(VITE_SOCKET_URL, {
   withCredentials: true,
+  transports: ["websocket", "polling"],
 });
 
 export default socket;
