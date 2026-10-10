@@ -6,7 +6,7 @@ import axios from "axios";
 const MORNING_SLOTS = ["8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM"];
 const EVENING_SLOTS = [
   "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM",
-  "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM","11:00 PM",
+  "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM","11:00 PM","12:00 PM",
 ];
 
 const STYLES = {
@@ -120,7 +120,7 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
         aria-label={`${time}, ${available ? "available" : "unavailable"}${isSelected ? ", selected" : ""}`}
         sx={{
           minHeight: 44,
-          borderRadius: "8px",
+          borderRadius: 0,
           fontSize: "0.85rem",
           fontWeight: isSelected ? 700 : 500,
           border: "2px solid",
@@ -155,7 +155,7 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
 
   const renderLegendItem = (bg, border, label) => (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-      <Box sx={{ width: 10, height: 10, bgcolor: bg, border: `1.5px solid ${border}`, borderRadius: "3px" }} />
+      <Box sx={{ width: 10, height: 10, bgcolor: bg, border: `1.5px solid ${border}`, borderRadius: 0 }} />
       <Typography sx={{ fontSize: "12px", color: "#64748B" }}>{label}</Typography>
     </Box>
   );
@@ -190,7 +190,7 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
           {[4, 9].map((count, i) => (
             <Box key={i} sx={gridSx}>
               {Array.from({ length: count }).map((_, j) => (
-                <Skeleton key={j} variant="rounded" height={44} />
+                <Skeleton key={j} variant="rectangular" height={44} />
               ))}
             </Box>
           ))}
