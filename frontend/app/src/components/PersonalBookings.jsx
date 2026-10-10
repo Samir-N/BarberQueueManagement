@@ -181,8 +181,8 @@ const PersonalBookings = () => {
         sx={{
           minHeight: "70vh",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          alignItems: "start",
+          justifyContent: "start",
           p: 1.5,
         }}
       >
