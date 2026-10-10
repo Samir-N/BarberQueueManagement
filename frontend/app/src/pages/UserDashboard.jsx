@@ -18,8 +18,8 @@ const UserDashboard = () => {
         container
         direction={isMobile ? "column" : "row"}
         spacing={3}
-        alignItems={isMobile ? "center" : "flex-start"}
-        justifyContent="center"
+        alignItems={isMobile ? "start" : "flex-start"}
+        justifyContent="start"
       >
       
 
