@@ -344,7 +344,7 @@ const BarberRegister = () => {
             Already have an account?{" "}
             <Typography
               component={Link}
-              to="barber/login"
+              to="/login"
               sx={{
                 color: '#1B263B',
                 fontWeight: 600,

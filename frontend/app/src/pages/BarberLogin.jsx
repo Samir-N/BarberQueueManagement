@@ -285,7 +285,7 @@ const UnifiedLogin = () => {
             Don't have an account?{" "}
             <Typography
               component={Link}
-              to="barber/register"
+              to="/register"
               sx={{
                 color: '#1B263B',
                 fontWeight: 600,
