@@ -4,6 +4,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
+// Regex validator for Nepali phone numbers (10 digits starting with 98 or 97)
+const isValidNepaliPhone = (phone) => {
+  return /^(98|97)\d{8}$/.test(String(phone).trim());
+};
+
 const getJwtSecret = () => {
   const secret = process.env.SECRET_KEY;
   if (!secret) {
@@ -39,6 +44,14 @@ const loginController = async (req, res) => {
     }
 
     const cleanPhone = String(phone).trim();
+
+    if (!isValidNepaliPhone(cleanPhone)) {
+      return res.status(400).send({
+        message: "Please provide a valid 10-digit phone number starting with 98 or 97.",
+        success: false
+      });
+    }
+
     const user = await userModel.findOne({ phone: cleanPhone });
     if (!user) {
       return res.status(404).send({
@@ -102,10 +115,19 @@ const registerController = async (req, res) => {
       });
     }
 
-    const cleanPhone = String(phone).trim();
-    if (cleanPhone.length !== 10) {
+    // Plain-text password check: at least 5 chars and includes at least one digit
+    if (!/^(?=.*\d).{5,}$/.test(password)) {
       return res.status(400).send({
-        message: "Phone number must be exactly 10 digits",
+        success: false,
+        message: "Password must be at least 5 characters and include at least one number.",
+      });
+    }
+
+    const cleanPhone = String(phone).trim();
+
+    if (!isValidNepaliPhone(cleanPhone)) {
+      return res.status(400).send({
+        message: "Please provide a valid 10-digit phone number starting with 98 or 97.",
         success: false,
       });
     }
@@ -164,6 +186,15 @@ const registerController = async (req, res) => {
 
   } catch (error) {
     console.error("Error in register controller:", error);
+
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).send({
+        message: messages[0],
+        success: false
+      });
+    }
+
     res.status(500).send({
       message: "Error in register controller",
       error: error.message,
@@ -218,7 +249,7 @@ const authController = async (req, res) => {
   }
 };
 
-// Profile Edit Controller with 15-day Cooldown (Native JS)
+// Profile Edit Controller with 15-day Cooldown
 const handleProfileEdit = async (req, res) => {
   try {
     const { name, phone } = req.body;
@@ -232,14 +263,14 @@ const handleProfileEdit = async (req, res) => {
     }
 
     const cleanPhone = String(phone).trim();
-    if (cleanPhone.length !== 10) {
+
+    if (!isValidNepaliPhone(cleanPhone)) {
       return res.status(400).send({
-        message: "Phone number must be exactly 10 digits",
+        message: "Please provide a valid 10-digit phone number starting with 98 or 97.",
         success: false,
       });
     }
 
-    // 1. Fetch user first to check cooldown
     const user = await userModel.findById(id);
     if (!user) {
       return res.status(404).send({
@@ -248,7 +279,6 @@ const handleProfileEdit = async (req, res) => {
       });
     }
 
-    // 2. Check 15-day cooldown period using native JS
     if (user.lastProfileUpdate) {
       const daysSinceUpdate = Math.floor(
         (Date.now() - new Date(user.lastProfileUpdate).getTime()) / (1000 * 60 * 60 * 24)
@@ -264,7 +294,6 @@ const handleProfileEdit = async (req, res) => {
       }
     }
 
-    // 3. Check if phone number is registered to another user or any barber
     const existingPhoneUser = await userModel.findOne({
       phone: cleanPhone,
       _id: { $ne: id },
@@ -278,7 +307,6 @@ const handleProfileEdit = async (req, res) => {
       });
     }
 
-    // 4. Update fields and record timestamp
     user.name = name;
     user.phone = cleanPhone;
     user.lastProfileUpdate = new Date();
@@ -301,6 +329,15 @@ const handleProfileEdit = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in handleProfileEdit:", error);
+
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).send({
+        message: messages[0],
+        success: false
+      });
+    }
+
     return res.status(500).send({
       message: "Error updating profile",
       error: error.message,
@@ -308,6 +345,7 @@ const handleProfileEdit = async (req, res) => {
     });
   }
 };
+
 // User Logout Controller
 const UserLogoutController = async (req, res) => {
   try {
@@ -329,6 +367,7 @@ const UserLogoutController = async (req, res) => {
     });
   }
 };
+
 module.exports = {
   UserLogoutController,
   loginController,

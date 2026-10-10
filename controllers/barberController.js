@@ -2,6 +2,11 @@ const barberModel = require('../models/barberModel.js');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Regex validator for Nepali phone numbers (10 digits starting with 98 or 97)
+const isValidNepaliPhone = (phone) => {
+  return /^(98|97)\d{8}$/.test(String(phone).trim());
+};
+
 const getJwtSecret = () => {
   const secret = process.env.SECRET_KEY;
   if (!secret) {
@@ -48,10 +53,10 @@ const BarberRegisterController = async (req, res) => {
     }
 
     const cleanPhone = String(phone).trim();
-    if (cleanPhone.length !== 10) {
+    if (!isValidNepaliPhone(cleanPhone)) {
       return res.status(400).send({
         success: false,
-        message: "Phone number must be exactly 10 digits",
+        message: "Please provide a valid 10-digit phone number starting with 98 or 97.",
       });
     }
 
@@ -105,6 +110,24 @@ const BarberRegisterController = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in Barber Register API:', error);
+
+    // Handle Mongoose Validation Errors (Phone / Password rules)
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).send({
+        success: false,
+        message: messages[0]
+      });
+    }
+
+    // Handle Duplicate Key Error (Unique constraints)
+    if (error.code === 11000) {
+      return res.status(400).send({
+        success: false,
+        message: "Barber phone number already exists."
+      });
+    }
+
     res.status(500).send({
       success: false,
       message: "Error in Barber Register API",
@@ -126,10 +149,10 @@ const BarberLoginController = async (req, res) => {
     }
 
     const cleanPhone = String(phone).trim();
-    if (cleanPhone.length !== 10) {
+    if (!isValidNepaliPhone(cleanPhone)) {
       return res.status(400).send({
-        message: "Phone number must be exactly 10 digits",
         success: false,
+        message: "Please provide a valid 10-digit phone number starting with 98 or 97.",
       });
     }
 

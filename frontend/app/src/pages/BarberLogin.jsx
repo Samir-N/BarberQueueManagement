@@ -51,10 +51,12 @@ const UnifiedLogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.phone.length !== 10) {
+    const isValidNepaliPhone = /^(98|97)\d{8}$/.test(formData.phone);
+
+    if (!isValidNepaliPhone) {
       dispatch(
         showAlert({
-          message: "Please enter a valid 10-digit phone number.",
+          message: "Please add a correct number (must be 10 digits starting with 98 or 97).",
           type: "error",
         })
       );
@@ -77,7 +79,6 @@ const UnifiedLogin = () => {
       if (response.data.success) {
         const loggedInUser = response.data.user || response.data.barber || response.data.data;
 
-        // Save only role to localStorage
         localStorage.setItem("role", formData.role);
 
         dispatch(
@@ -95,9 +96,7 @@ const UnifiedLogin = () => {
           })
         );
 
-        
-          navigate("/");
-        
+        navigate("/");
       } else {
         dispatch(
           showAlert({
@@ -242,10 +241,8 @@ const UnifiedLogin = () => {
                     >
                       {showPassword ? (
                         <Visibility sx={{ fontSize: '20px', color: '#6B7280' }} />
-
                       ) : (
                         <VisibilityOff sx={{ fontSize: '20px', color: '#6B7280' }} />
-
                       )}
                     </IconButton>
                   </InputAdornment>

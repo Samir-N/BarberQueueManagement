@@ -66,8 +66,15 @@ const BarberRegister = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.phone.length !== 10) {
-      dispatch(showAlert({ message: "Please enter a valid 10-digit phone number.", type: "error" }));
+    const isValidNepaliPhone = /^(98|97)\d{8}$/.test(formData.phone);
+
+    if (!isValidNepaliPhone) {
+      dispatch(
+        showAlert({
+          message: "Please add a correct number (must be 10 digits starting with 98 or 97).",
+          type: "error",
+        })
+      );
       return;
     }
 
@@ -99,7 +106,6 @@ const BarberRegister = () => {
       dispatch(hideLoading());
 
       if (response.data.success) {
-        // Save role in localStorage
         localStorage.setItem("role", submitData.role);
 
         dispatch(setUser({ user: response.data.user }));
@@ -227,10 +233,8 @@ const BarberRegister = () => {
                     >
                       {showPassword ? (
                         <Visibility sx={{ fontSize: '20px', color: '#6B7280' }} />
-
                       ) : (
                         <VisibilityOff sx={{ fontSize: 20, color: '#6B7280' }} />
-
                       )}
                     </IconButton>
                   </InputAdornment>
@@ -256,7 +260,18 @@ const BarberRegister = () => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                  
+                    <IconButton
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                      size="small"
+                    >
+                      {showConfirmPassword ? (
+                        <Visibility sx={{ fontSize: '20px', color: '#6B7280' }} />
+                      ) : (
+                        <VisibilityOff sx={{ fontSize: 20, color: '#6B7280' }} />
+                      )}
+                    </IconButton>
                   </InputAdornment>
                 ),
               }}

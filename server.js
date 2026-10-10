@@ -17,11 +17,14 @@ connectDB();
 // Express app
 const app = express();
 
+// Determine allowed origin for CORS (production vs local development)
+const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
+
 // 1. Enable CORS for Express HTTP requests with credentials
 app.use(
   cors({
-    origin: "http://localhost:5173", // Must match your React frontend URL exactly (no trailing slash)
-    credentials: true,               // Allows browser to receive and send HttpOnly cookies
+    origin: allowedOrigin,
+    credentials: true,             // Allows browser to receive and send HttpOnly cookies
   })
 );
 
@@ -32,8 +35,15 @@ app.use(cookieParser());
 app.use(morgan("dev"));
 app.use(express.json());
 
-// 4. Routes (Ensure both user and barber routes are mounted)
+// 4. Dedicated ping route for 24/7 cron-job uptime monitors
+app.get('/ping', (req, res) => {
+  res.status(200).send('Server is alive!');
+});
+
+// 5. Routes
 app.use("/api/v1", require("./routes/userRoute.js"));
+// If you have a separate barber route file, mount it here:
+// app.use("/api/v1", require("./routes/barberRoute.js"));
 
 // Create HTTP server (for both Express and Socket.IO)
 const httpServer = http.createServer(app);
@@ -41,7 +51,7 @@ const httpServer = http.createServer(app);
 // Socket.IO setup
 const io = require("socket.io")(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: allowedOrigin,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -49,6 +59,10 @@ const io = require("socket.io")(httpServer, {
 
 // Make io accessible to controllers
 app.set("io", io);
+
+app.get('/', (req, res) => {
+  res.send('BarberQueue API is running...');
+});
 
 // Handle socket connections
 require("./sockets/socketHandler.js")(io);
