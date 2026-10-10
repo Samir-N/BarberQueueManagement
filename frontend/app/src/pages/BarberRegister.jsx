@@ -14,7 +14,7 @@ import {
   IconButton,
 } from '@mui/material';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // Added Link
 import { useDispatch } from 'react-redux';
 import { showLoading, hideLoading, showAlert } from '../redux/features/alertSlice.js';
 import { setUser } from '../redux/features/authSlice.js';
@@ -338,28 +338,24 @@ const BarberRegister = () => {
           </Stack>
         </form>
 
-        <Typography 
-          sx={{ 
-            mt: 2.5, 
-            textAlign: 'center', 
-            fontSize: '13px', 
-            color: '#6B7280' 
-          }}
-        >
-          Already have an account?{' '}
-          <Box
-            component="span"
-            onClick={() => navigate('/barber/login')}
-            sx={{
-              color: '#1B263B',
-              fontWeight: 600,
-              cursor: 'pointer',
-              '&:hover': { color: '#E6B000', textDecoration: 'underline' },
-            }}
-          >
-            Log In
-          </Box>
-        </Typography>
+        {/* Login Link Section */}
+        <Box sx={{ textAlign: 'center', mt: 2.5 }}>
+          <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>
+            Already have an account?{" "}
+            <Typography
+              component={Link}
+              to="/login"
+              sx={{
+                color: '#1B263B',
+                fontWeight: 600,
+                textDecoration: 'none',
+                '&:hover': { color: '#E6B000', textDecoration: 'underline' }
+              }}
+            >
+              Log in now
+            </Typography>
+          </Typography>
+        </Box>
       </Card>
     </Box>
   );

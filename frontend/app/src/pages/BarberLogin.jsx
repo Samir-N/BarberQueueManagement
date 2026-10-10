@@ -18,7 +18,7 @@ import {
   showAlert,
 } from "../redux/features/alertSlice.js";
 import { setUser } from "../redux/features/authSlice.js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Added Link
 import LoginIcon from '@mui/icons-material/Login';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LockIcon from '@mui/icons-material/Lock';
@@ -278,6 +278,25 @@ const UnifiedLogin = () => {
             </Button>
           </Stack>
         </form>
+
+        {/* Register Redirect Section */}
+        <Box sx={{ textAlign: 'center', mt: 2.5 }}>
+          <Typography sx={{ fontSize: '14px', color: '#6B7280' }}>
+            Don't have an account?{" "}
+            <Typography
+              component={Link}
+              to="/register"
+              sx={{
+                color: '#1B263B',
+                fontWeight: 600,
+                textDecoration: 'none',
+                '&:hover': { textDecoration: 'underline' }
+              }}
+            >
+              Register now
+            </Typography>
+          </Typography>
+        </Box>
       </Card>
     </Box>
   );
