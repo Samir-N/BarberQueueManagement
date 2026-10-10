@@ -241,9 +241,11 @@ const UnifiedLogin = () => {
                       size="small"
                     >
                       {showPassword ? (
-                        <VisibilityOff sx={{ fontSize: '20px', color: '#6B7280' }} />
-                      ) : (
                         <Visibility sx={{ fontSize: '20px', color: '#6B7280' }} />
+
+                      ) : (
+                        <VisibilityOff sx={{ fontSize: '20px', color: '#6B7280' }} />
+
                       )}
                     </IconButton>
                   </InputAdornment>

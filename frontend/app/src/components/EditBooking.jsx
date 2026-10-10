@@ -27,6 +27,8 @@ const EditBooking = () => {
   const { services } = useSelector((state) => state.service);
   const dispatch = useDispatch();
 
+  const isPending = personalBooking?.status === "pending";
+
   const [formData, setFormData] = useState({
     serviceId: personalBooking?.service?._id || "",
     serviceName: personalBooking?.service?.serviceName || "",
@@ -36,9 +38,10 @@ const EditBooking = () => {
 
   const [openConfirm, setOpenConfirm] = useState(false);
 
-  useEffect(()=>{
-    
-  },[]);
+  // Extract barberId safely handling both populated object and string ID formats
+  const barberId = typeof personalBooking?.barberId === "object"
+    ? personalBooking?.barberId?._id
+    : personalBooking?.barberId;
 
   useEffect(() => {
     if (personalBooking) {
@@ -137,6 +140,39 @@ const EditBooking = () => {
     dispatch(hideBooking());
   };
 
+  // Restrict editing if booking status is not pending
+  if (!isPending) {
+    return (
+      <Box sx={{ mx: "auto", maxWidth: 600 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+          Edit Booking
+        </Typography>
+        <Box
+          sx={{
+            p: 2.5,
+            mb: 3,
+            bgcolor: "#fef2f2",
+            border: "1px solid #fca5a5",
+            borderRadius: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
+        >
+          <Typography sx={{ fontSize: "14px", fontWeight: 600, color: "#991b1b" }}>
+            Editing Not Allowed
+          </Typography>
+          <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>
+            This booking cannot be edited because its current status is <strong>{personalBooking?.status || "unknown"}</strong>. Only bookings with a <strong>pending</strong> status can be modified.
+          </Typography>
+        </Box>
+        <Button variant="tertiary" onClick={handleCancel} fullWidth>
+          Go Back
+        </Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ mx: "auto", maxWidth: 600 }}>
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
@@ -181,8 +217,12 @@ const EditBooking = () => {
             />
           </Box>
 
-          {/* Time */}
-          <TimeManager onTimeSelect={handleTimeSelect} />
+          {/* Time Manager */}
+          <TimeManager
+            barberId={barberId}
+            serviceId={formData.serviceId}
+            onTimeSelect={handleTimeSelect}
+          />
         </Box>
 
         {/* Action Buttons */}

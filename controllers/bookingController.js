@@ -1,31 +1,80 @@
+const mongoose = require("mongoose");
 const bookingModel = require("../models/bookingModel");
+const barberModel = require("../models/barberModel");
+
+const findBarberConflict = async (barberId, appointmentDate, excludeId = null) => {
+  const slotStart = new Date(appointmentDate);
+  slotStart.setSeconds(0, 0);
+  const slotEnd = new Date(slotStart.getTime() + 60 * 1000);
+
+  const query = {
+    barberId,
+    bookingTime: { $gte: slotStart, $lt: slotEnd },
+    status: { $ne: "cancelled" },
+  };
+  if (excludeId) query._id = { $ne: excludeId };
+
+  return bookingModel.findOne(query);
+};
 
 /**
- * @desc   Create a new booking (Max 1 active/upcoming booking per user)
- * @route  POST /api/v1/user/bookingInfo
+ * @desc    Create new booking
+ * @route   POST /api/v1/user/bookingInfo
  */
 const bookingController = async (req, res) => {
   try {
-    const { service, bookingTime, userId } = req.body;
+    const { service, bookingTime, barberId } = req.body;
 
-    // 1. Field Validation
-    if (!service || !bookingTime || !userId) {
+    const userId = req.user?._id || req.user?.id || req.userId || req.body?.userId;
+    const cleanServiceId = typeof service === "object" ? (service?._id || service?.id) : service;
+    const cleanBarberId = typeof barberId === "object" ? (barberId?._id || barberId?.id) : barberId;
+
+    if (!cleanServiceId || !bookingTime || !userId) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields: service, bookingTime, and userId are required",
       });
     }
 
-    // 2. Date Validation (Check if date is in the past)
-    const appointmentDate = new Date(bookingTime);
-    if (isNaN(appointmentDate.getTime()) || appointmentDate < new Date()) {
+    if (!cleanBarberId) {
       return res.status(400).json({
         success: false,
-        message: "Cannot book an appointment in the past",
+        message: "Please select a barber",
       });
     }
 
-    // 3. Prevent Multiple Active Bookings (Check from start of today onwards)
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: "Invalid User ID format" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(cleanBarberId)) {
+      return res.status(400).json({ success: false, message: "Invalid Barber ID format" });
+    }
+
+    const isServiceValid = Array.isArray(cleanServiceId)
+      ? cleanServiceId.every((id) => mongoose.Types.ObjectId.isValid(id))
+      : mongoose.Types.ObjectId.isValid(cleanServiceId);
+
+    if (!isServiceValid) {
+      return res.status(400).json({ success: false, message: "Invalid Service ID format" });
+    }
+
+    const appointmentDate = new Date(bookingTime);
+    if (isNaN(appointmentDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking time date format",
+      });
+    }
+    appointmentDate.setSeconds(0, 0);
+
+    const duplicateBooking = await findBarberConflict(cleanBarberId, appointmentDate);
+    if (duplicateBooking) {
+      return res.status(400).json({
+        success: false,
+        message: "This barber is already booked at this time. Please select another slot.",
+      });
+    }
+
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
@@ -42,27 +91,46 @@ const bookingController = async (req, res) => {
       });
     }
 
-    // 4. Calculate Expiration Timestamp (End of appointment day)
+    const barber = await barberModel.findById(cleanBarberId);
+    if (!barber) {
+      return res.status(404).json({
+        success: false,
+        message: "Selected barber not found",
+      });
+    }
+
     const expiresAt = new Date(appointmentDate);
     expiresAt.setHours(23, 59, 59, 999);
 
-    // 5. Create Booking Document
     const booking = new bookingModel({
       userId,
-      service,
+      barberId: cleanBarberId,
+      service: cleanServiceId,
       bookingTime: appointmentDate,
       expiresAt,
     });
-
     await booking.save();
 
-    // 6. Populate Data for Live Socket Broadcaster
-    const populatedBooking = await bookingModel
-      .findById(booking._id)
-      .populate("service")
-      .populate("userId");
+    try {
+      await barberModel.findByIdAndUpdate(cleanBarberId, {
+        $push: { bookedFor: { date: appointmentDate, userId: userId } },
+      });
+    } catch (barberErr) {
+      console.warn("Barber array update skipped:", barberErr.message);
+    }
 
-    // 7. Emit Realtime Socket Event
+    let populatedBooking;
+    try {
+      populatedBooking = await bookingModel
+        .findById(booking._id)
+        .populate("service")
+        .populate("userId")
+        .populate("barberId");
+    } catch (popErr) {
+      console.error("Populate error:", popErr.message);
+      populatedBooking = booking;
+    }
+
     const io = req.app.get("io");
     if (io) {
       io.emit("bookingCreated", populatedBooking);
@@ -74,6 +142,15 @@ const bookingController = async (req, res) => {
       data: populatedBooking,
     });
   } catch (error) {
+    console.error("CRITICAL BOOKING CONTROLLER ERROR:", error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "This slot was just booked by another user. Please select another slot.",
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Error in booking creation controller",
@@ -83,19 +160,33 @@ const bookingController = async (req, res) => {
 };
 
 /**
- * @desc   Fetch all upcoming bookings
- * @route  GET /api/v1/user/getBookings
+ * @desc    Fetch all upcoming bookings
+ * @route   GET /api/v1/user/getBookings
+ */
+/**
+ * @desc    Fetch all upcoming bookings
+ * @route   GET /api/v1/user/getBookings
  */
 const bookingsFetchController = async (req, res) => {
   try {
     const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    startOfToday.setUTCHours(0, 0, 0, 0);
 
     const bookingData = await bookingModel
       .find({ bookingTime: { $gte: startOfToday } })
-      .sort({ bookingTime: 1 })
       .populate("service")
-      .populate("userId");
+      .populate("userId")
+      .populate("barberId"); // <-- Added for consistent population
+
+    const statusPriority = { pending: 1, confirmed: 2, completed: 3, cancelled: 4 };
+
+    bookingData.sort((a, b) => {
+      const pA = statusPriority[a.status?.toLowerCase()] || 5;
+      const pB = statusPriority[b.status?.toLowerCase()] || 5;
+
+      if (pA !== pB) return pA - pB;
+      return new Date(a.bookingTime) - new Date(b.bookingTime);
+    });
 
     return res.status(200).json({
       success: true,
@@ -103,6 +194,7 @@ const bookingsFetchController = async (req, res) => {
       data: bookingData,
     });
   } catch (error) {
+    console.error("Booking Fetch Error:", error);
     return res.status(500).json({
       success: false,
       message: "Error fetching bookings",
@@ -110,10 +202,9 @@ const bookingsFetchController = async (req, res) => {
     });
   }
 };
-
 /**
- * @desc   Fetch active booking for logged-in user
- * @route  POST /api/v1/user/personalBookings
+ * @desc    Fetch active booking(s) for logged-in user
+ * @route   POST /api/v1/user/personalBookings
  */
 const personalBookingFetchController = async (req, res) => {
   try {
@@ -136,7 +227,8 @@ const personalBookingFetchController = async (req, res) => {
         status: { $ne: "cancelled" },
       })
       .populate("service")
-      .populate("userId");
+      .populate("userId")
+      .populate("barberId"); // <-- Add this line here!
 
     return res.status(200).json({
       success: true,
@@ -153,17 +245,17 @@ const personalBookingFetchController = async (req, res) => {
 };
 
 /**
- * @desc   Delete booking
- * @route  DELETE /api/v1/user/personalBooking/delete/:id
+ * @desc    Delete booking
+ * @route   DELETE /api/v1/user/personalBooking/delete/:id
  */
 const deleteBookingController = async (req, res) => {
   try {
     const bookingId = req.params.id;
 
-    if (!bookingId) {
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: "Booking ID is required",
+        message: "Valid Booking ID is required",
       });
     }
 
@@ -196,18 +288,18 @@ const deleteBookingController = async (req, res) => {
 };
 
 /**
- * @desc   Edit booking details
- * @route  PUT /api/v1/user/personalBooking/edit/:id
+ * @desc    Edit booking details
+ * @route   PUT /api/v1/user/personalBooking/edit/:id
  */
 const editBookingController = async (req, res) => {
   try {
     const bookingId = req.params.id;
     const { service, bookingTime } = req.body;
 
-    if (!bookingId) {
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: "Booking ID is required",
+        message: "Valid Booking ID is required",
       });
     }
 
@@ -225,6 +317,23 @@ const editBookingController = async (req, res) => {
         message: "Cannot update booking to a past date",
       });
     }
+    appointmentDate.setSeconds(0, 0);
+
+    const existing = await bookingModel.findById(bookingId);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    const conflict = await findBarberConflict(existing.barberId, appointmentDate, bookingId);
+    if (conflict) {
+      return res.status(400).json({
+        success: false,
+        message: "This barber is already booked at this time. Please select another slot.",
+      });
+    }
 
     const expiresAt = new Date(appointmentDate);
     expiresAt.setHours(23, 59, 59, 999);
@@ -237,13 +346,6 @@ const editBookingController = async (req, res) => {
       )
       .populate("service")
       .populate("userId");
-
-    if (!updatedBooking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found",
-      });
-    }
 
     const io = req.app.get("io");
     if (io) {
@@ -265,21 +367,29 @@ const editBookingController = async (req, res) => {
 };
 
 /**
- * @desc   Update booking status
- * @route  POST /api/v1/admin/booking/:id/status
+ * @desc    Update booking status
+ * @route   POST /api/v1/admin/booking/:id/status
  */
 const handleStatusController = async (req, res) => {
   try {
     const bookingId = req.params.id;
     let { status } = req.body;
 
-    if (!bookingId || !status) {
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: "Booking ID and status are required",
+        message: "Valid Booking ID is required",
       });
     }
 
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    status = status.toLowerCase().trim();
     if (status === "conformed") {
       status = "confirmed";
     }
@@ -291,7 +401,8 @@ const handleStatusController = async (req, res) => {
         { new: true, runValidators: true }
       )
       .populate("service")
-      .populate("userId");
+      .populate("userId")
+      .populate("barberId");
 
     if (!updatedBooking) {
       return res.status(404).json({
@@ -311,6 +422,16 @@ const handleStatusController = async (req, res) => {
       data: updatedBooking,
     });
   } catch (error) {
+    console.error("Status Update Error:", error);
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value provided",
+        error: error.message,
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Error in booking status controller",

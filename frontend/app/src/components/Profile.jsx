@@ -15,8 +15,14 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Button from "./Button";
 import { showLoading, hideLoading } from "../redux/features/alertSlice";
 import { setUser } from "../redux/features/authSlice";
@@ -24,8 +30,11 @@ import { setUser } from "../redux/features/authSlice";
 const Profile = ({ onEdit }) => {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(!isMobile);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -40,6 +49,11 @@ const Profile = ({ onEdit }) => {
       });
     }
   }, [user]);
+
+  // Collapse by default on mobile, expand on PC
+  useEffect(() => {
+    setExpanded(!isMobile);
+  }, [isMobile]);
 
   const handleEditClick = (e) => {
     if (onEdit) {
@@ -87,7 +101,7 @@ const Profile = ({ onEdit }) => {
       return;
     }
 
-    const cleanPhone = Number(cleanPhoneStr); // Converted to Number for the schema
+    const cleanPhone = Number(cleanPhoneStr);
 
     try {
       dispatch(showLoading());
@@ -110,7 +124,7 @@ const Profile = ({ onEdit }) => {
         };
 
         dispatch(setUser({ user: updatedState }));
-        alert("Profile updated successfully!"); 
+        alert("Profile updated successfully!");
         setOpen(false);
       } else {
         alert(response.data.message || "Failed to update profile.");
@@ -127,154 +141,179 @@ const Profile = ({ onEdit }) => {
     <>
       <Card
         sx={{
-          p: { xs: 2, sm: 3 },
           borderRadius: 2,
           border: "1px solid #E5E7EB",
           backgroundColor: "#FFFFFF",
           mb: { xs: 3, sm: 0 },
           width: "100%",
           boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+          overflow: "hidden",
         }}
       >
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-          <Typography
+        <Accordion
+          expanded={expanded}
+          onChange={(event, isExpanded) => setExpanded(isExpanded)}
+          elevation={0}
+          sx={{
+            backgroundColor: "transparent",
+            "&:before": { display: "none" },
+          }}
+        >
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
             sx={{
-              fontSize: { xs: 16, sm: 18 },
-              fontWeight: 600,
-              color: "#111827",
+              px: { xs: 2, sm: 3 },
+              py: 0.5,
+              minHeight: "auto",
+              "& .MuiAccordionSummary-content": { my: 1.5 },
             }}
           >
-            Profile Details
-          </Typography>
-        </Box>
+            <Typography
+              sx={{
+                fontSize: { xs: 16, sm: 18 },
+                fontWeight: 600,
+                color: "#111827",
+              }}
+            >
+              Profile Details
+            </Typography>
+          </AccordionSummary>
 
-        <Box sx={{ overflowX: "auto", mb: 3 }}>
-          <Table
-            size="small"
-            sx={{
-              minWidth: 260,
-              "& td, & th": { py: 0.75, px: 1.5 },
-            }}
-          >
-            <TableBody>
-              <TableRow>
-                <TableCell
-                  sx={{
-                    fontWeight: 500,
-                    color: "#6B7280",
-                    width: "40%",
-                    borderBottom: "1px solid #E5E7EB",
-                  }}
-                >
-                  ID
-                </TableCell>
-                <TableCell sx={{ borderBottom: "1px solid #E5E7EB" }}>
-                  <Box
-                    component="span"
-                    sx={{
-                      display: "inline-block",
-                      px: 1.5,
-                      py: 0.5,
-                      backgroundColor: "#EEF2FF",
-                      color: "#4338CA",
-                      border: "1px solid #C7D2FE",
-                      borderRadius: "6px",
-                      fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace",
-                      fontSize: "0.85rem",
-                      fontWeight: 700,
-                      letterSpacing: "0.75px",
-                    }}
-                  >
-                    {user?.publicId || "N/A"}
-                  </Box>
-                </TableCell>
-              </TableRow>
+          <AccordionDetails sx={{ px: { xs: 2, sm: 3 }, pt: 0, pb: 2.5 }}>
+            <Box sx={{ overflowX: "auto", mb: 2.5 }}>
+              <Table
+                size="small"
+                sx={{
+                  minWidth: 260,
+                  "& td, & th": { py: 0.75, px: 1.5 },
+                }}
+              >
+                <TableBody>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        fontWeight: 500,
+                        color: "#6B7280",
+                        width: "40%",
+                        borderBottom: "1px solid #E5E7EB",
+                      }}
+                    >
+                      ID
+                    </TableCell>
+                    <TableCell sx={{ borderBottom: "1px solid #E5E7EB" }}>
+                      <Box
+                        component="span"
+                        sx={{
+                          display: "inline-block",
+                          px: 1.5,
+                          py: 0.5,
+                          backgroundColor: "#EEF2FF",
+                          color: "#4338CA",
+                          border: "1px solid #C7D2FE",
+                          borderRadius: "6px",
+                          fontFamily: "'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace",
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          letterSpacing: "0.75px",
+                        }}
+                      >
+                        {user?.publicId || "N/A"}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
 
-              <TableRow>
-                <TableCell
-                  sx={{
-                    fontWeight: 500,
-                    color: "#6B7280",
-                    width: "40%",
-                    borderBottom: "1px solid #E5E7EB",
-                  }}
-                >
-                  Name
-                </TableCell>
-                <TableCell
-                  sx={{
-                    color: "#111827",
-                    fontWeight: 600,
-                    borderBottom: "1px solid #E5E7EB",
-                  }}
-                >
-                  {user?.name || "N/A"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell
-                  sx={{
-                    fontWeight: 500,
-                    color: "#6B7280",
-                    width: "40%",
-                    borderBottom: "1px solid #E5E7EB",
-                  }}
-                >
-                  Role
-                </TableCell>
-                <TableCell
-                  sx={{
-                    color: "#111827",
-                    fontWeight: 600,
-                    borderBottom: "1px solid #E5E7EB",
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {user?.role || "N/A"}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell
-                  sx={{
-                    fontWeight: 500,
-                    color: "#6B7280",
-                    width: "40%",
-                    borderBottom: "none",
-                  }}
-                >
-                  Phone
-                </TableCell>
-                <TableCell
-                  sx={{
-                    color: "#111827",
-                    fontWeight: 600,
-                    borderBottom: "none",
-                  }}
-                >
-                  {user?.phone || "N/A"}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </Box>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        fontWeight: 500,
+                        color: "#6B7280",
+                        width: "40%",
+                        borderBottom: "1px solid #E5E7EB",
+                      }}
+                    >
+                      Name
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "#111827",
+                        fontWeight: 600,
+                        borderBottom: "1px solid #E5E7EB",
+                      }}
+                    >
+                      {user?.name || "N/A"}
+                    </TableCell>
+                  </TableRow>
 
-        <Stack direction="row" sx={{ width: "100%" }}>
-          <Button
-            variant="tertiary"
-            size="sm"
-            onClick={handleEditClick}
-            sx={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 1,
-            }}
-          >
-            <EditIcon sx={{ fontSize: 18 }} />
-            Edit Profile
-          </Button>
-        </Stack>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        fontWeight: 500,
+                        color: "#6B7280",
+                        width: "40%",
+                        borderBottom: "1px solid #E5E7EB",
+                      }}
+                    >
+                      Role
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "#111827",
+                        fontWeight: 600,
+                        borderBottom: "1px solid #E5E7EB",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {user?.role || "N/A"}
+                    </TableCell>
+                  </TableRow>
+
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        fontWeight: 500,
+                        color: "#6B7280",
+                        width: "40%",
+                        borderBottom: "none",
+                      }}
+                    >
+                      Phone
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "#111827",
+                        fontWeight: 600,
+                        borderBottom: "none",
+                      }}
+                    >
+                      {user?.phone || "N/A"}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </Box>
+
+            <Stack direction="row" sx={{ width: "100%" }}>
+              <Button
+                variant="tertiary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditClick(e);
+                }}
+                sx={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                }}
+              >
+                <EditIcon sx={{ fontSize: 18 }} />
+                Edit Profile
+              </Button>
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
       </Card>
 
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">

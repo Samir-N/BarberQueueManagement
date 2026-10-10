@@ -226,9 +226,11 @@ const BarberRegister = () => {
                       size="small"
                     >
                       {showPassword ? (
-                        <VisibilityOff sx={{ fontSize: 20, color: '#6B7280' }} />
+                        <Visibility sx={{ fontSize: '20px', color: '#6B7280' }} />
+
                       ) : (
-                        <Visibility sx={{ fontSize: 20, color: '#6B7280' }} />
+                        <VisibilityOff sx={{ fontSize: 20, color: '#6B7280' }} />
+
                       )}
                     </IconButton>
                   </InputAdornment>
@@ -254,18 +256,7 @@ const BarberRegister = () => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      edge="end"
-                      size="small"
-                    >
-                      {showConfirmPassword ? (
-                        <VisibilityOff sx={{ fontSize: 20, color: '#6B7280' }} />
-                      ) : (
-                        <Visibility sx={{ fontSize: 20, color: '#6B7280' }} />
-                      )}
-                    </IconButton>
+                  
                   </InputAdornment>
                 ),
               }}

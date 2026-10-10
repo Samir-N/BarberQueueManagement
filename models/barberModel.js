@@ -21,9 +21,22 @@ const barberSchema = new mongoose.Schema(
     },
     barberStatus: {
       type: String,
-      enum: ['online', 'offline'],
+      enum: ['online', 'offline'
+        
+      ],
       default: 'offline',
     },
+    bookedFor:[ {
+      date: {
+      type: Date,
+      required: true,
+            },
+      userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: true,
+  },
+}]
   },
   { timestamps: true }
 );

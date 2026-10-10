@@ -8,6 +8,13 @@ const bookingSchema = new mongoose.Schema(
       required: true,
     },
 
+    barberId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "barber",
+      required: true,
+      index: true,
+    },
+
     service: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Service",
@@ -19,7 +26,6 @@ const bookingSchema = new mongoose.Schema(
       required: true,
     },
 
-    // DELETE THIS BOOKING AUTOMATICALLY AFTER expiresAt
     expiresAt: {
       type: Date,
       index: {
@@ -29,11 +35,22 @@ const bookingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled"],
+      enum: ["pending", "confirmed", "completed", "cancelled"], // ✅ Added "completed" here
       default: "pending",
     },
   },
   { timestamps: true }
+);
+
+bookingSchema.index(
+  { barberId: 1, bookingTime: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      barberId: { $exists: true },
+      status: { $in: ["pending", "confirmed", "completed", "cancelled"] },
+    },
+  }
 );
 
 const bookingModel = mongoose.model("Booking", bookingSchema);

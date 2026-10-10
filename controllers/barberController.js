@@ -15,7 +15,7 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax',
   path: '/',
-  maxAge: 3600000, // 1 hour
+  maxAge: 86400000, // 1 day
 };
 
 // Barber Register Controller
@@ -215,7 +215,10 @@ const BarberLogoutController = async (req, res) => {
       { new: true }
     );
 
-    res.clearCookie("token", cookieOptions);
+    res.clearCookie("token", {
+      ...cookieOptions,
+      maxAge: 0,
+    });
 
     if (!updatedBarber) {
       return res.status(404).send({
@@ -238,7 +241,7 @@ const BarberLogoutController = async (req, res) => {
 
     res.status(200).send({
       success: true,
-      message: "Logout Successful. Status set to offline."
+      message: "Logged out successfully. Status set to offline."
     });
   } catch (error) {
     console.error('Error in Barber Logout API:', error);

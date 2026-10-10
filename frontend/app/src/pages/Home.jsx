@@ -109,7 +109,7 @@ const Home = () => {
                 letterSpacing: '-0.02em',
               }}
             >
-              Welcome{user?.name ? `, ${user.name}` : ''}
+            {user?.name ? ` ${user.name}` : ''}
             </Typography>
 
             <RoleGuard allowedRoles={['user']}>

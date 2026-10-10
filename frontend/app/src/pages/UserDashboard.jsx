@@ -21,12 +21,14 @@ const UserDashboard = () => {
         alignItems={isMobile ? "center" : "flex-start"}
         justifyContent="center"
       >
-        <Grid item xs={12} sm={12} md={5} lg={4} sx={{ width: { xs: "100%", md: "auto" } }}>
-          <Profile />
-        </Grid>
+      
 
         <Grid item xs={12} sm={12} md={7} lg={5} sx={{ width: { xs: "100%", md: "auto" } }}>
           <PersonalBookings />
+        </Grid>
+
+          <Grid item xs={12} sm={12} md={5} lg={4} sx={{ width: { xs: "100%", md: "auto" } }}>
+          <Profile />
         </Grid>
       </Grid>
     </Box>

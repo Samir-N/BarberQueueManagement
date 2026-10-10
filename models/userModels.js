@@ -32,7 +32,8 @@ const userSchema = new mongoose.Schema({
   unique: true,
   uppercase: true,
   trim: true,
-}
+},
+lastProfileUpdate: { type: Date, default: null }
 });
 
 const userModel = mongoose.model('User', userSchema);

@@ -17,7 +17,7 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax',
   path: '/',
-  maxAge: 3600000, // 1 hour
+  maxAge: 86400000, // 1 day
 };
 
 const generatePublicId = (length = 5) => {
@@ -218,7 +218,7 @@ const authController = async (req, res) => {
   }
 };
 
-// Profile Edit Controller
+// Profile Edit Controller with 15-day Cooldown (Native JS)
 const handleProfileEdit = async (req, res) => {
   try {
     const { name, phone } = req.body;
@@ -239,7 +239,32 @@ const handleProfileEdit = async (req, res) => {
       });
     }
 
-    // Check if phone number is registered to another user or any barber
+    // 1. Fetch user first to check cooldown
+    const user = await userModel.findById(id);
+    if (!user) {
+      return res.status(404).send({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    // 2. Check 15-day cooldown period using native JS
+    if (user.lastProfileUpdate) {
+      const daysSinceUpdate = Math.floor(
+        (Date.now() - new Date(user.lastProfileUpdate).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const cooldownDays = 15;
+
+      if (daysSinceUpdate < cooldownDays) {
+        const remainingDays = cooldownDays - daysSinceUpdate;
+        return res.status(400).send({
+          message: `You can update your profile again in ${remainingDays} day(s).`,
+          success: false,
+        });
+      }
+    }
+
+    // 3. Check if phone number is registered to another user or any barber
     const existingPhoneUser = await userModel.findOne({
       phone: cleanPhone,
       _id: { $ne: id },
@@ -253,26 +278,19 @@ const handleProfileEdit = async (req, res) => {
       });
     }
 
-    const updatedUser = await userModel.findByIdAndUpdate(
-      id,
-      { name, phone: cleanPhone },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!updatedUser) {
-      return res.status(404).send({
-        message: "User not found",
-        success: false,
-      });
-    }
+    // 4. Update fields and record timestamp
+    user.name = name;
+    user.phone = cleanPhone;
+    user.lastProfileUpdate = new Date();
+    await user.save();
 
     const safeUser = {
-      _id: updatedUser._id,
-      id: updatedUser._id,
-      publicId: updatedUser.publicId || null,
-      name: updatedUser.name,
-      phone: updatedUser.phone,
-      role: updatedUser.role,
+      _id: user._id,
+      id: user._id,
+      publicId: user.publicId || null,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
     };
 
     return res.status(200).send({
@@ -290,8 +308,29 @@ const handleProfileEdit = async (req, res) => {
     });
   }
 };
+// User Logout Controller
+const UserLogoutController = async (req, res) => {
+  try {
+    res.clearCookie("token", {
+      ...cookieOptions,
+      maxAge: 0,
+    });
 
+    return res.status(200).send({
+      message: "Logged out successfully",
+      success: true,
+    });
+  } catch (error) {
+    console.error('Error in logout controller:', error);
+    res.status(500).send({
+      message: "Error in logout controller",
+      error: error.message,
+      success: false,
+    });
+  }
+};
 module.exports = {
+  UserLogoutController,
   loginController,
   registerController,
   authController,

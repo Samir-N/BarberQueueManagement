@@ -10,7 +10,8 @@ const {
   loginController, 
   registerController, 
   authController,
-  handleProfileEdit 
+  handleProfileEdit ,
+  UserLogoutController
 } = require('../controllers/userController');
 
 const {
@@ -34,6 +35,8 @@ const {
 router.post('/user/register', registerController);
 router.post('/user/login', loginController);
 router.get('/user/getUserData', authMiddleware, authController);
+router.post('/user/logout', authMiddleware, UserLogoutController);
+
 // --- Barber Auth Routes ---
 router.post('/barber/register', BarberRegisterController);
 router.post('/barber/login', BarberLoginController);

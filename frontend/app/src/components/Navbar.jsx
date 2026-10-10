@@ -16,6 +16,7 @@ import {
 import { useSelector, useDispatch } from "react-redux";
 import { clearUser } from "../redux/features/authSlice";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from 'axios';
 import Button from "./Button";
 
 import HomeIcon from '@mui/icons-material/Home';
@@ -51,10 +52,18 @@ const Navbar = () => {
     setMobileOpen((prev) => !prev);
   };
 
-  const handleLogout = () => {
-    dispatch(clearUser());
-    setMobileOpen(false);
-    navigate('/barber/login');
+  const handleLogout = async () => {
+    try {
+      // Calls the backend logout route to clear the HttpOnly cookie
+      await axios.post('/api/v1/user/logout', {}, { withCredentials: true });
+    } catch (error) {
+      console.error("Logout failed on server", error);
+    } finally {
+      // Always clear local Redux/storage state and redirect
+      dispatch(clearUser());
+      setMobileOpen(false);
+      navigate('/barber/login');
+    }
   };
 
   const handleNavigation = (path) => {

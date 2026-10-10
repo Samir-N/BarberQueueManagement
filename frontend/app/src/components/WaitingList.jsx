@@ -54,8 +54,8 @@ const WaitingList = () => {
   const [showOnlyMine, setShowOnlyMine] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
 
-  // Fetch bookings with local loading state to avoid global unmount loops
   const fetchBookings = useCallback(async () => {
     try {
       setFetching(true);
@@ -74,7 +74,6 @@ const WaitingList = () => {
     fetchBookings();
   }, [fetchBookings]);
 
-  // Real-time socket event listeners
   useEffect(() => {
     const handleNewBooking = (booking) => dispatch(addBooking(booking));
     const handleDeletedBooking = (booking) => dispatch(deleteBooking(booking));
@@ -111,14 +110,30 @@ const WaitingList = () => {
     [user]
   );
 
+  const checkIsAssignedBarber = useCallback(
+    (b) => {
+      const barberField = b.barberId || b.barber;
+      const bookingBarberId = typeof barberField === "object" ? (barberField?._id || barberField?.id) : barberField;
+      const currentUserId = user?._id || user?.id;
+      return Boolean(currentUserId && String(bookingBarberId) === String(currentUserId));
+    },
+    [user]
+  );
+
   const filteredBookings = useMemo(() => {
     let list = bookings;
     const startOfToday = dayjs().startOf("day");
 
     list = list.filter((b) => {
       if (!b.bookingTime) return false;
+      const status = b.status?.toLowerCase();
+      if (status === "cancelled" || status === "rejected") return false;
       return dayjs(b.bookingTime).isAfter(startOfToday) || dayjs(b.bookingTime).isSame(startOfToday, "day");
     });
+
+    if (user?.role === "barber") {
+      list = list.filter(checkIsAssignedBarber);
+    }
 
     if (showOnlyMine) list = list.filter(checkIsMyBooking);
     if (showOnlyPending) list = list.filter((b) => !b.status || b.status.toLowerCase() === "pending");
@@ -142,12 +157,21 @@ const WaitingList = () => {
       });
     }
 
-    return list;
-  }, [bookings, searchTerm, showOnlyMine, showOnlyPending, checkIsMyBooking]);
+    const statusPriority = { pending: 1, confirmed: 2, completed: 3, cancelled: 4 };
+
+    return [...list].sort((a, b) => {
+      const pA = statusPriority[a.status?.toLowerCase()] || 5;
+      const pB = statusPriority[b.status?.toLowerCase()] || 5;
+
+      if (pA !== pB) return pA - pB;
+      return new Date(a.bookingTime) - new Date(b.bookingTime);
+    });
+  }, [bookings, searchTerm, showOnlyMine, showOnlyPending, checkIsMyBooking, checkIsAssignedBarber, user]);
 
   const handleStatusChange = async (bookingId, status) => {
     try {
       await axios.post(`/api/v1/admin/booking/${bookingId}/status`, { status });
+      setCancellingId(null);
       await fetchBookings();
     } catch (err) {
       console.error("Failed to update status:", err);
@@ -167,24 +191,26 @@ const WaitingList = () => {
       case "completed":
         return {
           label: "Completed",
-          color: theme.palette.secondary.dark,
-          bg: alpha(theme.palette.secondary.main, 0.1),
+          color: theme.palette.primary.dark,
+          bg: alpha(theme.palette.primary.main, 0.1),
           icon: <CheckCircleOutlineIcon sx={{ fontSize: 14 }} />,
         };
       case "cancelled":
       case "rejected":
         return {
           label: "Cancelled",
-          color: theme.palette.error.dark,
-          bg: alpha(theme.palette.error.main, 0.1),
+          color: "text.disabled",
+          bg: "transparent",
+          border: "1px solid",
+          borderColor: "divider",
           icon: <CancelOutlinedIcon sx={{ fontSize: 14 }} />,
         };
       case "pending":
       default:
         return {
           label: "Pending",
-          color: theme.palette.info.dark,
-          bg: alpha(theme.palette.info.main, 0.1),
+          color: theme.palette.warning.dark,
+          bg: alpha(theme.palette.warning.main, 0.1),
           icon: <ScheduleIcon sx={{ fontSize: 14 }} />,
         };
     }
@@ -203,6 +229,8 @@ const WaitingList = () => {
           borderRadius: "12px",
           bgcolor: meta.bg,
           color: meta.color,
+          border: meta.border || "none",
+          borderColor: meta.borderColor || "transparent",
           fontSize: "12px",
           fontWeight: 600,
         }}
@@ -216,11 +244,11 @@ const WaitingList = () => {
   const renderBookingTime = (bookingTime) => {
     if (!bookingTime) return <Typography variant="caption" color="text.secondary">—</Typography>;
     return (
-      <Box>
-        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
-          {dayjs(bookingTime).format("hh:mm A")}
+      <Box sx={{ whiteSpace: "nowrap" }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", lineHeight: 1.2 }}>
+          {dayjs(bookingTime).format("h:mm A")}
         </Typography>
-        <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "11px" }}>
+        <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "11px", display: "block", mt: 0.2 }}>
           {dayjs(bookingTime).format("DD MMM")}
         </Typography>
       </Box>
@@ -238,7 +266,6 @@ const WaitingList = () => {
           overflow: "hidden",
         }}
       >
-        {/* Header Toolbar */}
         <Box
           sx={{
             p: 2,
@@ -262,7 +289,6 @@ const WaitingList = () => {
             {fetching && <CircularProgress size={16} sx={{ ml: 1 }} />}
           </Stack>
 
-          {/* Controls Bar */}
           <Stack
             direction="row"
             spacing={1}
@@ -315,14 +341,14 @@ const WaitingList = () => {
 
         <Divider />
 
-        {/* List Section */}
         {filteredBookings.length > 0 ? (
           isMobile ? (
             <Stack spacing={1.5} sx={{ p: 2, bgcolor: "action.hover" }}>
               {filteredBookings.map((b, idx) => {
-                const isPending = !b.status || b.status.toLowerCase() === "pending";
+                const statusLower = b.status?.toLowerCase() || "pending";
+                const isPending = statusLower === "pending";
+                const isConfirmed = statusLower === "confirmed";
                 const publicId = getPublicUserId(b);
-                const isMyBooking = checkIsMyBooking(b);
 
                 return (
                   <Paper
@@ -344,14 +370,9 @@ const WaitingList = () => {
 
                     <Stack direction="row" justifyContent="space-between" alignItems="baseline" my={0.5}>
                       <Box>
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                          <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "0.95rem" }}>
-                            {b.userId?.name || "Guest"}
-                          </Typography>
-                          {isMyBooking && (
-                            <Chip label="YOU" size="small" color="primary" sx={{ height: 16, fontSize: "9px", fontWeight: 700 }} />
-                          )}
-                        </Stack>
+                        <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "0.95rem" }}>
+                          {b.userId?.name || "Guest"}
+                        </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {b.service?.serviceName || "Service"}
                         </Typography>
@@ -371,6 +392,43 @@ const WaitingList = () => {
                           <Button variant="danger" size="sm" onClick={() => handleStatusChange(b._id, "cancelled")} className="w-full">
                             Cancel
                           </Button>
+                        </Stack>
+                      )}
+                      {isConfirmed && (
+                        <Stack direction="row" spacing={1} mt={1.5} alignItems="center">
+                          <Button variant="success" size="sm" onClick={() => handleStatusChange(b._id, "completed")} className="w-full">
+                            Complete
+                          </Button>
+
+                          {cancellingId === b._id ? (
+                            <Stack direction="row" spacing={0.5} alignItems="center">
+                              <Typography variant="caption" color="error.main" sx={{ fontSize: "11px", whiteSpace: "nowrap" }}>
+                                Sure?
+                              </Typography>
+                              <Button variant="danger" size="sm" onClick={() => handleStatusChange(b._id, "cancelled")} className="px-2 py-0.5 text-xs">
+                                Yes
+                              </Button>
+                              <Button variant="tertiary" size="sm" onClick={() => setCancellingId(null)} className="px-2 py-0.5 text-xs">
+                                No
+                              </Button>
+                            </Stack>
+                          ) : (
+                            <Typography
+                              component="span"
+                              onClick={() => setCancellingId(b._id)}
+                              sx={{
+                                fontSize: "11px",
+                                color: "text.disabled",
+                                cursor: "pointer",
+                                textDecoration: "underline",
+                                "&:hover": { color: "error.main" },
+                                whiteSpace: "nowrap",
+                                ml: 1,
+                              }}
+                            >
+                              cancel?
+                            </Typography>
+                          )}
                         </Stack>
                       )}
                     </RoleGuard>
@@ -396,9 +454,10 @@ const WaitingList = () => {
 
                 <TableBody>
                   {filteredBookings.map((b, idx) => {
-                    const isPending = !b.status || b.status.toLowerCase() === "pending";
+                    const statusLower = b.status?.toLowerCase() || "pending";
+                    const isPending = statusLower === "pending";
+                    const isConfirmed = statusLower === "confirmed";
                     const publicId = getPublicUserId(b);
-                    const isMyBooking = checkIsMyBooking(b);
 
                     return (
                       <TableRow key={b._id || idx} hover>
@@ -407,14 +466,9 @@ const WaitingList = () => {
                         </TableCell>
 
                         <TableCell>
-                          <Stack direction="row" alignItems="center" spacing={1}>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {b.userId?.name || "Guest"}
-                            </Typography>
-                            {isMyBooking && (
-                              <Chip label="YOU" size="small" color="primary" sx={{ height: 16, fontSize: "9px", fontWeight: 700 }} />
-                            )}
-                          </Stack>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {b.userId?.name || "Guest"}
+                          </Typography>
                         </TableCell>
 
                         <TableCell sx={{ fontSize: "13px" }}>
@@ -431,7 +485,7 @@ const WaitingList = () => {
 
                         <RoleGuard allowedRoles={["admin", "barber"]} userRole={user?.role}>
                           <TableCell align="center">
-                            {isPending ? (
+                            {isPending && (
                               <Stack direction="row" spacing={1} justifyContent="center">
                                 <Button variant="success" size="sm" onClick={() => handleStatusChange(b._id, "confirmed")}>
                                   Confirm
@@ -440,8 +494,44 @@ const WaitingList = () => {
                                   Cancel
                                 </Button>
                               </Stack>
-                            ) : (
-                              <Typography variant="caption" color="text.disabled">—</Typography>
+                            )}
+
+                            {isConfirmed && (
+                              <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                                <Button variant="success" size="sm" onClick={() => handleStatusChange(b._id, "completed")}>
+                                  Complete
+                                </Button>
+
+                                {cancellingId === b._id ? (
+                                  <Stack direction="row" spacing={0.5} alignItems="center">
+                                    <Typography variant="caption" color="error.main" sx={{ fontSize: "11px" }}>
+                                      Sure?
+                                    </Typography>
+                                    <Button variant="danger" size="sm" onClick={() => handleStatusChange(b._id, "cancelled")}>
+                                      Yes
+                                    </Button>
+                                    <Button variant="tertiary" size="sm" onClick={() => setCancellingId(null)}>
+                                      No
+                                    </Button>
+                                  </Stack>
+                                ) : (
+                                  <Typography
+                                    component="span"
+                                    onClick={() => setCancellingId(b._id)}
+                                    sx={{
+                                      fontSize: "11px",
+                                      color: "text.disabled",
+                                      cursor: "pointer",
+                                      textDecoration: "underline",
+                                      "&:hover": { color: "error.main" },
+                                      whiteSpace: "nowrap",
+                                      ml: 1,
+                                    }}
+                                  >
+                                    cancel?
+                                  </Typography>
+                                )}
+                              </Stack>
                             )}
                           </TableCell>
                         </RoleGuard>
@@ -455,7 +545,7 @@ const WaitingList = () => {
         ) : (
           <Box sx={{ p: 4, textAlign: "center" }}>
             <Typography variant="body2" color="text.secondary">
-              No bookings found.
+              No bookings found in the queue.
             </Typography>
           </Box>
         )}
