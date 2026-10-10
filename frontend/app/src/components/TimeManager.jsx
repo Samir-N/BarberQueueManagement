@@ -26,6 +26,13 @@ const EVENING_SLOTS = [
 ];
 const ALL_SLOTS = [...MORNING_SLOTS, ...EVENING_SLOTS];
 
+// Simple two-state design
+const STYLES = {
+  available: { border: "#CBD5E1", bg: "#FFFFFF", text: "#1B263B" },
+  unavailable: { border: "#E2E8F0", bg: "#F1F5F9", text: "#94A3B8" },
+  selected: { border: "#FFC300", bg: "#FFFDF4", text: "#1B263B" },
+};
+
 const getSlotDayjs = (timeString) => {
   const [time, modifier] = timeString.split(" ");
   let [hours, minutes] = time.split(":").map(Number);
@@ -84,23 +91,32 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
     fetchBookedSlots();
   }, [fetchBookedSlots]);
 
-  const getStatus = useCallback(
+  // A slot is either available or unavailable (booked or time already passed)
+  const isAvailable = useCallback(
     (timeString) => {
       const slotTime = getSlotDayjs(timeString);
-      if (bookedSlots.some((bTime) => dayjs(bTime).isSame(slotTime, "minute"))) return "booked";
-      if (slotTime.isBefore(now)) return "past";
-      return "available";
+      if (bookedSlots.some((bTime) => dayjs(bTime).isSame(slotTime, "minute"))) return false;
+      if (slotTime.isBefore(now)) return false;
+      return true;
     },
     [bookedSlots, now]
   );
 
   const availableSlots = useMemo(
-    () => ALL_SLOTS.filter((t) => getStatus(t) === "available"),
-    [getStatus]
+    () => ALL_SLOTS.filter(isAvailable),
+    [isAvailable]
   );
   const nextAvailable = availableSlots[0];
 
   const noBarber = !barberId;
+
+  // Clear selection if the chosen slot stops being available
+  useEffect(() => {
+    if (selectedTime && !isAvailable(selectedTime)) {
+      setSelectedTime(null);
+      onTimeSelect(null);
+    }
+  }, [selectedTime, isAvailable, onTimeSelect]);
 
   const handleSelect = (time) => {
     setSelectedTime(time);
@@ -108,42 +124,21 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
   };
 
   const renderSlot = (time) => {
-    const status = noBarber ? "disabled" : getStatus(time);
-    const isSelected = selectedTime === time && status === "available";
-    const unavailable = status !== "available";
-
-    let borderColor = "#86efac";
-    let bgColor = "#f0fdf4";
-    let textColor = "#15803d";
-    let subLabel = null;
-
-    if (isSelected) {
-      borderColor = "#FFC300";
-      bgColor = "#FFFDF4";
-      textColor = "#1B263B";
-    } else if (status === "booked") {
-      borderColor = "#fca5a5";
-      bgColor = "#fef2f2";
-      textColor = "#991b1b";
-      subLabel = "Booked";
-    } else if (status === "past") {
-      borderColor = "#E2E8F0";
-      bgColor = "#F1F5F9";
-      textColor = "#94A3B8";
-      subLabel = "Passed";
-    } else if (status === "disabled") {
-      borderColor = "#E2E8F0";
-      bgColor = "#F8FAFC";
-      textColor = "#94A3B8";
-    }
+    const available = !noBarber && isAvailable(time);
+    const isSelected = selectedTime === time && available;
+    const style = isSelected
+      ? STYLES.selected
+      : available
+      ? STYLES.available
+      : STYLES.unavailable;
 
     return (
       <ButtonBase
         key={time}
-        disabled={unavailable}
+        disabled={!available}
         onClick={() => handleSelect(time)}
         aria-pressed={isSelected}
-        aria-label={`${time}${subLabel ? `, ${subLabel}` : ""}${isSelected ? ", selected" : ""}`}
+        aria-label={`${time}, ${available ? "available" : "unavailable"}${isSelected ? ", selected" : ""}`}
         sx={{
           position: "relative",
           minHeight: 46,
@@ -154,33 +149,21 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
           fontWeight: isSelected ? 700 : 600,
           transition: "all 0.15s ease",
           border: "2px solid",
-          borderColor,
-          bgcolor: bgColor,
-          color: textColor,
-          cursor: unavailable ? "not-allowed" : "pointer",
+          borderColor: style.border,
+          bgcolor: style.bg,
+          color: style.text,
+          cursor: available ? "pointer" : "not-allowed",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          opacity: status === "disabled" ? 0.6 : 1,
-          textDecoration: status === "booked" ? "line-through" : "none",
           "&:hover:not(.Mui-disabled)": {
             borderColor: "#FFC300",
             bgcolor: "#FFFDF4",
-            color: "#1B263B",
           },
           "&:focus-visible": { outline: "2px solid #FFC300", outlineOffset: 2 },
         }}
       >
         <span>{time}</span>
-        {subLabel && (
-          <Typography
-            variant="caption"
-            sx={{ fontSize: "0.62rem", lineHeight: 1, mt: 0.25, textDecoration: "none", fontWeight: 600 }}
-          >
-            {subLabel}
-          </Typography>
-        )}
         {isSelected && (
           <CheckCircleIcon
             sx={{ position: "absolute", top: -7, right: -7, fontSize: 18, color: "#D99B00", bgcolor: "#fff", borderRadius: "50%" }}
@@ -241,8 +224,10 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
                   fontWeight: 600,
                   fontSize: "11px",
                   height: "22px",
-                  bgcolor: availableSlots.length ? "#f0fdf4" : "#fef2f2",
-                  color: availableSlots.length ? "#15803d" : "#991b1b",
+                  bgcolor: availableSlots.length ? "#FFFDF4" : "#F1F5F9",
+                  color: availableSlots.length ? "#1B263B" : "#94A3B8",
+                  border: "1px solid",
+                  borderColor: availableSlots.length ? "#FFE08A" : "#E2E8F0",
                 }}
               />
             )}
@@ -276,19 +261,19 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
           <Box
             sx={{
               display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, p: 1.25,
-              bgcolor: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "8px",
+              bgcolor: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "8px",
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <ErrorOutlineIcon sx={{ fontSize: 18, color: "#991b1b" }} />
-              <Typography sx={{ fontSize: "13px", fontWeight: 500, color: "#991b1b" }}>
-                Couldn't load booked times.
+              <ErrorOutlineIcon sx={{ fontSize: 18, color: "#64748B" }} />
+              <Typography sx={{ fontSize: "13px", fontWeight: 500, color: "#475569" }}>
+                Couldn't load times.
               </Typography>
             </Box>
             <Button
               size="small"
               onClick={fetchBookedSlots}
-              sx={{ fontWeight: 600, color: "#991b1b", textTransform: "none" }}
+              sx={{ fontWeight: 600, color: "#1B263B", textTransform: "none" }}
             >
               Retry
             </Button>
@@ -344,10 +329,8 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
                 borderTop: "1px solid #F1F5F9", flexWrap: "wrap",
               }}
             >
-              {renderLegendItem("#f0fdf4", "#86efac", "Available")}
-              {renderLegendItem("#FFFDF4", "#FFC300", "Selected")}
-              {renderLegendItem("#fef2f2", "#fca5a5", "Booked")}
-              {renderLegendItem("#F1F5F9", "#E2E8F0", "Passed")}
+              {renderLegendItem(STYLES.available.bg, STYLES.available.border, "Available")}
+              {renderLegendItem(STYLES.unavailable.bg, STYLES.unavailable.border, "Unavailable")}
             </Box>
           </Box>
         )}
