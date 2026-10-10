@@ -28,7 +28,7 @@ import {
   fetchServicesFailure,
 } from "./redux/features/serviceSlice";
 
-axios.defaults.baseURL = "http://localhost:8080";
+axios.defaults.baseURL = import.meta.env.VITE_SOCKET_URL;
 axios.defaults.withCredentials = true;
 
 function App() {
