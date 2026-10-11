@@ -2,36 +2,37 @@ import { Box } from "@mui/material";
 import Profile from "../components/Profile.jsx";
 import PersonalBookings from "../components/PersonalBookings.jsx";
 
-const NAVBAR_HEIGHT = 64; // change if your Navbar height differs
-const GAP = 0; // space between the two cards (px)
+const GAP = 0; // space between the cards in px (try 12 if you want a little room)
 
 const UserDashboard = () => {
   return (
     <Box
       sx={{
         width: "100%",
-        minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
         display: "flex",
-        justifyContent: "start", // vertical centering
-        alignItems: "center", // horizontal centering
-        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "flex-start",
         px: { xs: 2, sm: 3 },
-        py: 2,
+        py: { xs: 2, sm: 3 },
         boxSizing: "border-box",
       }}
     >
       <Box
         sx={{
           width: "100%",
-          maxWidth: 600, // same width for both cards on PC
+          maxWidth: { xs: 520, md: 1040 },
           display: "flex",
-          flexDirection: "column",
+          flexDirection: { xs: "column", md: "row" }, // stacked on mobile, side by side on PC
+          alignItems: "flex-start",
           gap: `${GAP}px`,
-          "& > *": { width: "100%", margin: 0 }, // force equal width, no margins
         }}
       >
-        <PersonalBookings />
-        <Profile />
+        <Box sx={{ flex: 1, width: "100%", minWidth: 0 }}>
+          <PersonalBookings />
+        </Box>
+        <Box sx={{ flex: 1, width: "100%", minWidth: 0 }}>
+          <Profile />
+        </Box>
       </Box>
     </Box>
   );

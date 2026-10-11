@@ -40,6 +40,25 @@ import axios from "axios";
 import dayjs from "dayjs";
 import socket from "../socket/socket.js"; // <-- Import socket connection
 
+const cardSx = {
+  width: "100%",
+  borderRadius: 2.5,
+  bgcolor: "#FFFFFF",
+  border: "1px solid #E5E7EB",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+};
+
+const labelCellSx = {
+  fontWeight: 500,
+  color: "#6B7280",
+  display: "flex",
+  alignItems: "center",
+  gap: 1,
+  fontSize: "0.85rem",
+};
+
+const valueCellSx = { color: "#111827", fontSize: "0.85rem" };
+
 const PersonalBookings = () => {
   const { personalBooking, isVisible } = useSelector((state) => state.booking);
   const user = useSelector((state) => state.auth?.user);
@@ -175,29 +194,11 @@ const PersonalBookings = () => {
     }
   };
 
+  // Empty state: no min-height, same width as every other card
   if (!personalBooking) {
     return (
-      <Box
-        sx={{
-          minHeight: "70vh",
-          display: "flex",
-          alignItems: "start",
-          justifyContent: "start",
-          p: 1.5,
-        }}
-      >
-        <Card
-          sx={{
-            maxWidth: 400,
-            width: "100%",
-            p: 3,
-            textAlign: "center",
-            borderRadius: 2.5,
-            bgcolor: "#FFFFFF",
-            border: "1px solid #E5E7EB",
-            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
-          }}
-        >
+      <Box sx={{ width: "100%" }}>
+        <Card sx={{ ...cardSx, p: 3, textAlign: "center" }}>
           <EventBusy sx={{ fontSize: 40, color: "#9CA3AF", mb: 1 }} />
           <Typography variant="h6" fontWeight="700" gutterBottom sx={{ color: "#111827", fontSize: "1.1rem" }}>
             No Booking Found
@@ -214,14 +215,72 @@ const PersonalBookings = () => {
     ? dayjs(personalBooking.bookingTime).format("MMM DD, YYYY [at] hh:mm A")
     : "scheduled time";
 
+  const rows = [
+    {
+      icon: <ContentCut fontSize="small" color="action" />,
+      label: "Service",
+      value: personalBooking.service?.serviceName || "N/A",
+      bold: true,
+    },
+    {
+      icon: <AttachMoney fontSize="small" color="action" />,
+      label: "Price",
+      value: `Rs. ${personalBooking.service?.price || "N/A"}`,
+    },
+    {
+      icon: <Person fontSize="small" color="action" />,
+      label: "Barber",
+      value:
+        personalBooking.barberId?.name ||
+        personalBooking.barber?.name ||
+        personalBooking.barberName ||
+        "N/A",
+    },
+    {
+      icon: <Phone fontSize="small" color="action" />,
+      label: "Contact",
+      value:
+        personalBooking.barberId?.phone ||
+        personalBooking.barber?.phone ||
+        personalBooking.barberPhone ||
+        "N/A",
+    },
+    {
+      icon: <CalendarToday fontSize="small" color="action" />,
+      label: "Date",
+      value: personalBooking.bookingTime
+        ? dayjs(personalBooking.bookingTime).format("MMM DD, YYYY")
+        : "N/A",
+    },
+    {
+      icon: <AccessTime fontSize="small" color="action" />,
+      label: "Time",
+      value: personalBooking.bookingTime
+        ? dayjs(personalBooking.bookingTime).format("hh:mm A")
+        : "N/A",
+    },
+    {
+      icon: <InfoOutlined fontSize="small" color="action" />,
+      label: "Status",
+      value: (
+        <Chip
+          label={personalBooking.status || "N/A"}
+          color={getStatusColor(personalBooking.status)}
+          size="small"
+          sx={{ textTransform: "capitalize", fontWeight: 600, height: 22, fontSize: "0.75rem" }}
+        />
+      ),
+    },
+  ];
+
   return (
-    <Box sx={{ width: "100%", maxWidth: 520, mx: "auto", p: { xs: 1, sm: 1.5 } }}>
+    <Box sx={{ width: "100%" }}>
       {isVisible ? (
-        <Card sx={{ borderRadius: 2.5, bgcolor: "#FFFFFF", border: "1px solid #E5E7EB", p: 2, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", mb: 2 }}>
+        <Card sx={{ ...cardSx, p: 2 }}>
           <EditBooking />
         </Card>
       ) : (
-        <Card sx={{ borderRadius: 2.5, bgcolor: "#FFFFFF", border: "1px solid #E5E7EB", p: { xs: 2, sm: 2.5 }, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
+        <Card sx={{ ...cardSx, p: { xs: 2, sm: 2.5 } }}>
           <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#111827", mb: 1.5 }}>
             Booking Details
           </Typography>
@@ -229,67 +288,25 @@ const PersonalBookings = () => {
           <Box sx={{ overflowX: "auto", mb: 2 }}>
             <Table size="small" sx={{ "& td, & th": { py: 0.8, px: 1 } }}>
               <TableBody>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 500, color: "#6B7280", width: "40%", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 1, fontSize: "0.85rem" }}>
-                    <ContentCut fontSize="small" color="action" /> Service
-                  </TableCell>
-                  <TableCell sx={{ color: "#111827", fontWeight: 600, borderBottom: "1px solid #F3F4F6", fontSize: "0.85rem" }}>
-                    {personalBooking.service?.serviceName || "N/A"}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 500, color: "#6B7280", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 1, fontSize: "0.85rem" }}>
-                    <AttachMoney fontSize="small" color="action" /> Price
-                  </TableCell>
-                  <TableCell sx={{ color: "#111827", borderBottom: "1px solid #F3F4F6", fontSize: "0.85rem" }}>
-                    Rs. {personalBooking.service?.price || "N/A"}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 500, color: "#6B7280", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 1, fontSize: "0.85rem" }}>
-                    <Person fontSize="small" color="action" /> Barber
-                  </TableCell>
-                  <TableCell sx={{ color: "#111827", borderBottom: "1px solid #F3F4F6", fontSize: "0.85rem" }}>
-                    {personalBooking.barberId?.name || personalBooking.barber?.name || personalBooking.barberName || "N/A"}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 500, color: "#6B7280", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 1, fontSize: "0.85rem" }}>
-                    <Phone fontSize="small" color="action" /> Contact
-                  </TableCell>
-                  <TableCell sx={{ color: "#111827", borderBottom: "1px solid #F3F4F6", fontSize: "0.85rem" }}>
-                    {personalBooking.barberId?.phone || personalBooking.barber?.phone || personalBooking.barberPhone || "N/A"}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 500, color: "#6B7280", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 1, fontSize: "0.85rem" }}>
-                    <CalendarToday fontSize="small" color="action" /> Date
-                  </TableCell>
-                  <TableCell sx={{ color: "#111827", borderBottom: "1px solid #F3F4F6", fontSize: "0.85rem" }}>
-                    {personalBooking.bookingTime ? dayjs(personalBooking.bookingTime).format("MMM DD, YYYY") : "N/A"}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 500, color: "#6B7280", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 1, fontSize: "0.85rem" }}>
-                    <AccessTime fontSize="small" color="action" /> Time
-                  </TableCell>
-                  <TableCell sx={{ color: "#111827", borderBottom: "1px solid #F3F4F6", fontSize: "0.85rem" }}>
-                    {personalBooking.bookingTime ? dayjs(personalBooking.bookingTime).format("hh:mm A") : "N/A"}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 500, color: "#6B7280", borderBottom: "none", display: "flex", alignItems: "center", gap: 1, fontSize: "0.85rem" }}>
-                    <InfoOutlined fontSize="small" color="action" /> Status
-                  </TableCell>
-                  <TableCell sx={{ borderBottom: "none" }}>
-                    <Chip
-                      label={personalBooking.status || "N/A"}
-                      color={getStatusColor(personalBooking.status)}
-                      size="small"
-                      sx={{ textTransform: "capitalize", fontWeight: 600, height: 22, fontSize: "0.75rem" }}
-                    />
-                  </TableCell>
-                </TableRow>
+                {rows.map((row, i) => {
+                  const border = i === rows.length - 1 ? "none" : "1px solid #F3F4F6";
+                  return (
+                    <TableRow key={row.label}>
+                      <TableCell sx={{ ...labelCellSx, width: "40%", borderBottom: border }}>
+                        {row.icon} {row.label}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          ...valueCellSx,
+                          fontWeight: row.bold ? 600 : 400,
+                          borderBottom: border,
+                        }}
+                      >
+                        {row.value}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </Box>
@@ -305,13 +322,7 @@ const PersonalBookings = () => {
                 textAlign: "center",
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                  color: "#047857",
-                }}
-              >
+              <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: "#047857" }}>
                 Visit shop on {formattedDateTime}
               </Typography>
             </Box>
@@ -344,7 +355,11 @@ const PersonalBookings = () => {
       )}
 
       {/* Delete/Cancel Confirmation Dialog */}
-      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)} PaperProps={{ sx: { borderRadius: 2.5, p: 0.5, maxWidth: 380, width: "100%" } }}>
+      <Dialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+        PaperProps={{ sx: { borderRadius: 2.5, p: 0.5, maxWidth: 380, width: "100%" } }}
+      >
         <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
           {isCompleted ? "Confirm Removal" : "Confirm Cancellation"}
         </DialogTitle>
@@ -372,7 +387,12 @@ const PersonalBookings = () => {
         onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))} severity={snackbar.severity} variant="filled" sx={{ width: "100%" }}>
+        <Alert
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
