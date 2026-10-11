@@ -6,14 +6,8 @@ import axios from "axios";
 const MORNING_SLOTS = ["8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM"];
 const EVENING_SLOTS = [
   "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM",
-  "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM","11:00 PM","12:00 PM",
+  "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM", "12:00 PM",
 ];
-
-const STYLES = {
-  available: { border: "#CBD5E1", bg: "#FFFFFF", text: "#1B263B" },
-  unavailable: { border: "#F1F5F9", bg: "#F8FAFC", text: "#CBD5E1" },
-  selected: { border: "#FFC300", bg: "#FFFDF4", text: "#1B263B" },
-};
 
 const getSlotDayjs = (timeString) => {
   const [time, modifier] = timeString.split(" ");
@@ -72,7 +66,6 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
     fetchBookedSlots();
   }, [fetchBookedSlots]);
 
-  // Refresh automatically when the user comes back to the tab (replaces the refresh button)
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "visible") fetchBookedSlots();
@@ -93,7 +86,6 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
 
   const noBarber = !barberId;
 
-  // Clear selection if the chosen slot stops being available
   useEffect(() => {
     if (selectedTime && !isAvailable(selectedTime)) {
       setSelectedTime(null);
@@ -109,28 +101,25 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
   const renderSlot = (time) => {
     const available = !noBarber && isAvailable(time);
     const isSelected = selectedTime === time && available;
-    const style = isSelected ? STYLES.selected : available ? STYLES.available : STYLES.unavailable;
 
     return (
       <ButtonBase
         key={time}
         disabled={!available}
         onClick={() => handleSelect(time)}
-        aria-pressed={isSelected}
-        aria-label={`${time}, ${available ? "available" : "unavailable"}${isSelected ? ", selected" : ""}`}
         sx={{
-          minHeight: 44,
-          borderRadius: 0,
-          fontSize: "0.85rem",
-          fontWeight: isSelected ? 700 : 500,
-          border: "2px solid",
-          borderColor: style.border,
-          bgcolor: style.bg,
-          color: style.text,
+          py: 1,
+          px: 1.5,
+          borderRadius: 1,
+          fontSize: "0.8rem",
+          fontWeight: isSelected ? 600 : 400,
+          border: "1px solid",
+          borderColor: isSelected ? "#FFC300" : available ? "#E2E8F0" : "#F1F5F9",
+          bgcolor: isSelected ? "#FFFDF4" : available ? "#FFFFFF" : "#F8FAFC",
+          color: isSelected ? "#1B263B" : available ? "#334155" : "#CBD5E1",
           cursor: available ? "pointer" : "not-allowed",
-          transition: "border-color 0.15s ease, background-color 0.15s ease",
+          transition: "all 0.15s ease",
           "&:hover:not(.Mui-disabled)": { borderColor: "#FFC300" },
-          "&:focus-visible": { outline: "2px solid #FFC300", outlineOffset: 2 },
         }}
       >
         {time}
@@ -144,65 +133,68 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
     gap: 1,
   };
 
-  const renderGroup = (label, slots) => (
-    <Box>
-      <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#64748B", mb: 0.75 }}>
-        {label}
-      </Typography>
-      <Box sx={gridSx}>{slots.map(renderSlot)}</Box>
-    </Box>
-  );
-
-  const renderLegendItem = (bg, border, label) => (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-      <Box sx={{ width: 10, height: 10, bgcolor: bg, border: `1.5px solid ${border}`, borderRadius: 0 }} />
-      <Typography sx={{ fontSize: "12px", color: "#64748B" }}>{label}</Typography>
-    </Box>
-  );
-
   return (
     <Box sx={{ mb: 2 }}>
-      <Typography sx={{ fontSize: "14px", fontWeight: 700, color: "#1B263B", mb: 1.5 }}>
-        Today, {now.format("ddd DD MMM")}
-      </Typography>
-
-      {noBarber && (
-        <Typography sx={{ fontSize: "13px", color: "#64748B", mb: 1.5 }}>
-          Choose a barber above to see available times.
+      {/* Header & Status */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mb: 1.5 }}>
+        <Typography sx={{ fontSize: "14px", fontWeight: 600, color: "#1B263B" }}>
+          Today ({now.format("MMM D")})
         </Typography>
-      )}
-
-      {!noBarber && error && !loadingSlots && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-          <Typography sx={{ fontSize: "13px", color: "#64748B" }}>Couldn't load times.</Typography>
+        {noBarber && (
+          <Typography sx={{ fontSize: "12px", color: "#94A3B8" }}>
+            Select a barber first
+          </Typography>
+        )}
+        {!noBarber && error && !loadingSlots && (
           <Button
             size="small"
             onClick={fetchBookedSlots}
-            sx={{ fontWeight: 600, color: "#1B263B", textTransform: "none", minWidth: 0 }}
+            sx={{ fontSize: "12px", color: "#EF4444", textTransform: "none", p: 0, minWidth: 0 }}
           >
-            Retry
+            Retry loading
           </Button>
-        </Box>
-      )}
+        )}
+      </Box>
 
+      {/* Slots Body */}
       {loadingSlots ? (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {[4, 9].map((count, i) => (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          {[3, 6].map((count, i) => (
             <Box key={i} sx={gridSx}>
               {Array.from({ length: count }).map((_, j) => (
-                <Skeleton key={j} variant="rectangular" height={44} />
+                <Skeleton key={j} variant="rounded" height={36} />
               ))}
             </Box>
           ))}
         </Box>
       ) : (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {renderGroup("Morning", MORNING_SLOTS)}
-          {renderGroup("Evening", EVENING_SLOTS)}
+          {/* Morning Slots */}
+          <Box>
+            <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, mb: 0.75 }}>
+              Morning
+            </Typography>
+            <Box sx={gridSx}>{MORNING_SLOTS.map(renderSlot)}</Box>
+          </Box>
 
-          <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
-            {renderLegendItem(STYLES.available.bg, STYLES.available.border, "Available")}
-            {renderLegendItem(STYLES.unavailable.bg, STYLES.unavailable.border, "Unavailable")}
+          {/* Evening Slots */}
+          <Box>
+            <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, mb: 0.75 }}>
+              Afternoon & Evening
+            </Typography>
+            <Box sx={gridSx}>{EVENING_SLOTS.map(renderSlot)}</Box>
+          </Box>
+
+          {/* Clean Legend */}
+          <Box sx={{ display: "flex", gap: 2, justifyContent: "center", pt: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#FFFFFF", border: "1px solid #CBD5E1", borderRadius: "50%" }} />
+              <Typography sx={{ fontSize: "11px", color: "#64748B" }}>Available</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: "#F1F5F9", borderRadius: "50%" }} />
+              <Typography sx={{ fontSize: "11px", color: "#94A3B8" }}>Unavailable</Typography>
+            </Box>
           </Box>
         </Box>
       )}
