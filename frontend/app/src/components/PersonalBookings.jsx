@@ -330,14 +330,13 @@ const PersonalBookings = () => {
             <Stack
               direction={{ xs: "column", sm: "row" }}
               spacing={1}
-              justifyContent="flex-end"
               sx={{ width: "100%" }}
             >
               {isPending && (
                 <Button
                   variant="primary"
                   onClick={handleEdit}
-                  sx={{ width: { xs: "100%", sm: "auto" }, minWidth: 110 }}
+                  sx={{ flex: 1, width: "100%" }}
                 >
                   Edit Booking
                 </Button>
@@ -345,7 +344,7 @@ const PersonalBookings = () => {
               <Button
                 variant="tertiary"
                 onClick={handleDeleteClick}
-                sx={{ width: { xs: "100%", sm: "auto" }, minWidth: 110 }}
+                sx={{ flex: 1, width: "100%" }}
               >
                 {isCompleted ? "Remove Booking" : "Cancel Booking"}
               </Button>
