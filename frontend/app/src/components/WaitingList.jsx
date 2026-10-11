@@ -96,7 +96,7 @@ const WaitingList = () => {
       }
 
       if ("vibrate" in navigator) {
-      navigator.vibrate([200]);
+      navigator.vibrate([300,100,300]);
     }
 
     };
