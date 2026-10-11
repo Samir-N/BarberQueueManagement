@@ -16,11 +16,13 @@ const UserDashboard = () => {
         spacing={3}
         justifyContent="center"
         alignItems="flex-start"
+        direction="column"
+        wrap="nowrap"
       >
-        <Grid item xs={12} sm={12} md={7} lg={5} sx={{ width: { xs: "100%", md: "auto" } }}>
+        <Grid item sx={{ width: "100%", maxWidth: { lg: 900 } }}>
           <PersonalBookings />
         </Grid>
-        <Grid item xs={12} sm={12} md={5} lg={4} sx={{ width: { xs: "100%", md: "auto" } }}>
+        <Grid item sx={{ width: "100%", maxWidth: { lg: 900 } }}>
           <Profile />
         </Grid>
       </Grid>
