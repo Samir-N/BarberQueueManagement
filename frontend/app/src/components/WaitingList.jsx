@@ -343,7 +343,7 @@ const WaitingList = () => {
 
         {filteredBookings.length > 0 ? (
           isMobile ? (
-            <Stack spacing={1.5} sx={{ p: 2, bgcolor: "action.hover" }}>
+            <Stack spacing={1.5} sx={{ p: 2 }}>
               {filteredBookings.map((b, idx) => {
                 const statusLower = b.status?.toLowerCase() || "pending";
                 const isPending = statusLower === "pending";
