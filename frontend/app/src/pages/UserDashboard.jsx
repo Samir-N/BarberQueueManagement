@@ -1,6 +1,6 @@
-import { Grid, Box } from '@mui/material';
-import Profile from '../components/Profile.jsx';
-import PersonalBookings from '../components/PersonalBookings.jsx';
+import { Stack, Box } from "@mui/material";
+import Profile from "../components/Profile.jsx";
+import PersonalBookings from "../components/PersonalBookings.jsx";
 
 const UserDashboard = () => {
   return (
@@ -11,21 +11,17 @@ const UserDashboard = () => {
         px: { xs: 2, sm: 3, md: 4 },
       }}
     >
-      <Grid
-        container
-        spacing={3}
-        justifyContent="center"
-        alignItems="flex-center"
-        direction="column"
-        wrap="nowrap"
+      <Stack
+        spacing={{ xs: 2, sm: 3 }}
+        sx={{
+          width: "100%",
+          maxWidth: { lg: 900 },
+          mx: "auto",
+        }}
       >
-        <Grid item sx={{ width: "100%", maxWidth: { lg: 900 } }}>
-          <PersonalBookings />
-        </Grid>
-        <Grid item sx={{ width: "100%", maxWidth: { lg: 900 } }}>
-          <Profile />
-        </Grid>
-      </Grid>
+        <PersonalBookings />
+        <Profile />
+      </Stack>
     </Box>
   );
 };
