@@ -94,6 +94,11 @@ const WaitingList = () => {
       if (user?.role === "barber" && currentUserId && String(bookingBarberId) === String(currentUserId)) {
         playSound();
       }
+
+      if ("vibrate" in navigator) {
+      navigator.vibrate([200]);
+    }
+
     };
 
     const handleDeletedBooking = (booking) => dispatch(deleteBooking(booking));
