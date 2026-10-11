@@ -15,7 +15,7 @@ const UserDashboard = () => {
         container
         spacing={3}
         justifyContent="center"
-        alignItems="flex-start"
+        alignItems="flex-center"
         direction="column"
         wrap="nowrap"
       >
