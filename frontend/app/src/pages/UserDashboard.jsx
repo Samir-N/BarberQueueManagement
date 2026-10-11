@@ -8,7 +8,7 @@ const UserDashboard = () => {
   return (
     <Box
       sx={{
-        width: "100%",
+        width: "80%",
         display: "flex",
         justifyContent: "center",
         alignItems: "flex-start",
