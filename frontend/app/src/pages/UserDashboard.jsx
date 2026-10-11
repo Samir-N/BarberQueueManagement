@@ -7,16 +7,17 @@ const GAP = 12; // space between the cards in px (try 12 if you want a little ro
 const UserDashboard = () => {
   return (
     <Box
-      sx={{
-        width: "80%",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "flex-start",
-        px: { xs: 2, sm: 3 },
-        py: { xs: 2, sm: 3 },
-        boxSizing: "border-box",
-      }}
-    >
+  sx={{
+    width: "80%",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "flex-start",
+    mx: "auto",
+    px: { xs: 2, sm: 3 },
+    py: { xs: 2, sm: 3 },
+    boxSizing: "border-box",
+  }}
+>
       <Box
         sx={{
           width: "100%",
