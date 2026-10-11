@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import Profile from "../components/Profile.jsx";
 import PersonalBookings from "../components/PersonalBookings.jsx";
 
-const GAP = 0; // space between the cards in px (try 12 if you want a little room)
+const GAP = 12; // space between the cards in px (try 12 if you want a little room)
 
 const UserDashboard = () => {
   return (
