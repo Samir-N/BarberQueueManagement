@@ -33,6 +33,7 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import Button from "./Button";
 import { RoleGuard } from "./RoleGuard.jsx";
 import socket from "../socket/socket.js";
+import useSoundNotification from "../hooks/useSoundNotification";
 
 import {
   bookingData,
@@ -46,6 +47,8 @@ const WaitingList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const dispatch = useDispatch();
+
+  const playSound = useSoundNotification();
 
   const bookings = useSelector((state) => state.booking?.bookings || []);
   const user = useSelector((state) => state.auth?.user);
@@ -74,8 +77,25 @@ const WaitingList = () => {
     fetchBookings();
   }, [fetchBookings]);
 
+  // Real-time socket events + targeted sound trigger
   useEffect(() => {
-    const handleNewBooking = (booking) => dispatch(addBooking(booking));
+    const handleNewBooking = (booking) => {
+      dispatch(addBooking(booking));
+
+      // Extract the barber ID from the incoming booking object (handles populated object or plain string/ID)
+      const bookingBarberId = 
+        typeof booking?.barberId === "object" 
+          ? (booking.barberId?._id || booking.barberId?.id) 
+          : booking?.barberId;
+
+      const currentUserId = user?._id || user?.id;
+
+      // Play sound ONLY if the logged-in user is a barber AND matches the booking's assigned barberId
+      if (user?.role === "barber" && currentUserId && String(bookingBarberId) === String(currentUserId)) {
+        playSound();
+      }
+    };
+
     const handleDeletedBooking = (booking) => dispatch(deleteBooking(booking));
     const handleUpdatedBooking = (booking) => dispatch(updateBooking(booking));
     const handleStatusUpdated = (booking) => dispatch(updateStatus(booking));
@@ -91,7 +111,7 @@ const WaitingList = () => {
       socket.off("bookingUpdated", handleUpdatedBooking);
       socket.off("bookingStatusUpdated", handleStatusUpdated);
     };
-  }, [dispatch]);
+  }, [dispatch, user, playSound]);
 
   const getPublicUserId = (booking) => {
     if (booking?.userId?.publicId) {
@@ -112,7 +132,7 @@ const WaitingList = () => {
 
   const checkIsAssignedBarber = useCallback(
     (b) => {
-      const barberField = b.barberId || b.barber;
+      const barberField = b.barberId;
       const bookingBarberId = typeof barberField === "object" ? (barberField?._id || barberField?.id) : barberField;
       const currentUserId = user?._id || user?.id;
       return Boolean(currentUserId && String(bookingBarberId) === String(currentUserId));
