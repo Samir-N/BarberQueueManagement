@@ -12,7 +12,7 @@ const UserDashboard = () => {
         width: "100%",
         minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
         display: "flex",
-        justifyContent: "center", // vertical centering
+        justifyContent: "start", // vertical centering
         alignItems: "center", // horizontal centering
         flexDirection: "column",
         px: { xs: 2, sm: 3 },
