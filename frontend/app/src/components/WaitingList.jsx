@@ -306,12 +306,6 @@ const WaitingList = () => {
             <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
               Queue
             </Typography>
-            <Chip
-              label={filteredBookings.length}
-              size="small"
-              sx={{ fontWeight: 700, fontSize: "11px", height: 20, bgcolor: "action.selected" }}
-            />
-            {fetching && <CircularProgress size={16} sx={{ ml: 1 }} />}
           </Stack>
 
           <Stack
