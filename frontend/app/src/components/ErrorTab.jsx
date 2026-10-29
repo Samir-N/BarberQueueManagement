@@ -9,12 +9,16 @@ import { useSelector, useDispatch } from "react-redux";
 import { hideAlert } from "../redux/features/alertSlice";
 
 const iconPop = keyframes`
-  0%   { transform: scale(0.4); opacity: 0; }
-  65%  { transform: scale(1.15); opacity: 1; }
+  0%   { transform: scale(0.5); opacity: 0; }
+  65%  { transform: scale(1.12); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 `;
 
-// status colours come from the design system
+const cardIn = keyframes`
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+`;
+
 const ALERT_STYLES = {
   success: { color: "#34C759", Icon: CheckCircleRoundedIcon },
   error:   { color: "#FF3B30", Icon: CancelRoundedIcon },
@@ -22,8 +26,10 @@ const ALERT_STYLES = {
   info:    { color: "#007AFF", Icon: InfoRoundedIcon },
 };
 
-// iOS-style easing
 const IOS_EASE_OUT = "cubic-bezier(0.32, 0.72, 0, 1)";
+
+// one place to control how far from the top the popup sits
+const TOP_OFFSET = { xs: 12, sm: 16 };
 
 const ErrorTab = () => {
   const { message, type, open, duration } = useSelector((state) => state.alert);
@@ -44,7 +50,6 @@ const ErrorTab = () => {
     dispatch(hideAlert());
   };
 
-  // clear content only after the exit animation finishes
   const handleExited = () => {
     setDisplayType(null);
     setDisplayMessage(null);
@@ -57,7 +62,7 @@ const ErrorTab = () => {
   return (
     <Snackbar
       open={open}
-      autoHideDuration={duration || 4000}
+      autoHideDuration={duration || 3500}
       onClose={handleClose}
       anchorOrigin={{ vertical: "top", horizontal: "center" }}
       TransitionComponent={Slide}
@@ -65,9 +70,20 @@ const ErrorTab = () => {
         direction: "down",
         onExited: handleExited,
         easing: { enter: IOS_EASE_OUT, exit: "cubic-bezier(0.4, 0, 1, 1)" },
-        timeout: { enter: 450, exit: 250 },
+        timeout: { enter: 400, exit: 220 },
       }}
-      sx={{ top: { xs: "80px", sm: "80px" }, zIndex: 1400 }}
+      sx={{
+        // sits close to the top, and clears the notch on phones
+        top: {
+          xs: `calc(env(safe-area-inset-top, 0px) + ${TOP_OFFSET.xs}px) !important`,
+          sm: `${TOP_OFFSET.sm}px !important`,
+        },
+        zIndex: 1400,
+        left: 0,
+        right: 0,
+        justifyContent: "center",
+        px: 2,
+      }}
     >
       <Box
         role="alert"
@@ -77,20 +93,26 @@ const ErrorTab = () => {
           display: "flex",
           alignItems: "center",
           gap: 1.5,
-          minWidth: { xs: 290, sm: 360 },
-          maxWidth: { xs: "calc(100vw - 32px)", sm: 480 },
+          width: "100%",
+          minWidth: { xs: 0, sm: 340 },
+          maxWidth: { xs: 420, sm: 440 },
           px: 2,
           py: 1.5,
           cursor: "pointer",
-          // frosted glass, neutral, no status colour on the card
-          backgroundColor: "rgba(255, 255, 255, 0.85)",
+          userSelect: "none",
+          backgroundColor: "rgba(255, 255, 255, 0.88)",
           backdropFilter: "saturate(180%) blur(20px)",
           WebkitBackdropFilter: "saturate(180%) blur(20px)",
           border: "1px solid rgba(209, 209, 214, 0.7)",
-          borderRadius: "16px",
-          boxShadow: "0 8px 24px rgba(28, 28, 30, 0.12)",
+          borderRadius: "18px",
+          boxShadow:
+            "0 8px 24px rgba(28, 28, 30, 0.12), 0 1px 3px rgba(28, 28, 30, 0.06)",
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif",
+          animation: `${cardIn} 0.35s ${IOS_EASE_OUT} both`,
+          transition: "transform 0.15s ease",
+          "&:active": { transform: "scale(0.98)" },
+          "@media (prefers-reduced-motion: reduce)": { animation: "none" },
         }}
       >
         <Icon
@@ -98,7 +120,7 @@ const ErrorTab = () => {
             flexShrink: 0,
             fontSize: 26,
             color,
-            animation: `${iconPop} 0.45s ${IOS_EASE_OUT} 0.12s both`,
+            animation: `${iconPop} 0.45s ${IOS_EASE_OUT} 0.1s both`,
             "@media (prefers-reduced-motion: reduce)": { animation: "none" },
           }}
         />
@@ -107,10 +129,11 @@ const ErrorTab = () => {
           sx={{
             flex: 1,
             fontSize: "15px",
-            lineHeight: "22px",
+            lineHeight: "21px",
             fontWeight: 500,
             color: "#1C1C1E",
             fontFamily: "inherit",
+            wordBreak: "break-word",
           }}
         >
           {displayMessage}
