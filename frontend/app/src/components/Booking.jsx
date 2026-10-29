@@ -135,6 +135,7 @@ const Booking = () => {
         setFormData({ service: "", barber: "", time: null, timeSelected: false });
         setActiveStep(0);
         handleClose();
+        navigate('/user/dashboard');
       } else {
         dispatch(showAlert({ message: res.data?.message || 'Booking Failed!', type: 'error' }));
       }
@@ -142,7 +143,7 @@ const Booking = () => {
       dispatch(showAlert({ message: error.response?.data?.message || 'Booking Failed!', type: 'error' }));
     } finally {
       dispatch(hideLoading());
-      navigate('/user/dashboard');
+      
     }
   };
 
