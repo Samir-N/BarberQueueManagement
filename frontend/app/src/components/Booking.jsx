@@ -142,6 +142,7 @@ const Booking = () => {
       dispatch(showAlert({ message: error.response?.data?.message || 'Booking Failed!', type: 'error' }));
     } finally {
       dispatch(hideLoading());
+      navigate('/user/dashboard');
     }
   };
 
