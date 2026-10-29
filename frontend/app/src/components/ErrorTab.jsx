@@ -15,8 +15,14 @@ const iconPop = keyframes`
 `;
 
 const cardIn = keyframes`
-  from { opacity: 0; transform: scale(0.97); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translate3d(0, 0, 0) scale(0.97); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+`;
+
+// transform-only animation = runs on the GPU, no layout or repaint per frame
+const drain = keyframes`
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
 `;
 
 const ALERT_STYLES = {
@@ -29,6 +35,7 @@ const ALERT_STYLES = {
 const IOS_EASE_OUT = "cubic-bezier(0.32, 0.72, 0, 1)";
 const TOP_OFFSET = { xs: 12, sm: 16 };
 const SWIPE_DISMISS_PX = 30;
+const DEFAULT_DURATION = 3500;
 
 const ErrorTab = () => {
   const { message, type, open, duration, title } = useSelector(
@@ -40,10 +47,11 @@ const ErrorTab = () => {
   const [displayMessage, setDisplayMessage] = useState(null);
   const [displayTitle, setDisplayTitle] = useState(null);
 
-  // swipe-up-to-dismiss state
-  const [dragY, setDragY] = useState(0);
-  const [dragging, setDragging] = useState(false);
+  // swipe state lives in refs, so dragging never re-renders the component
+  const cardRef = useRef(null);
   const startY = useRef(0);
+  const dragY = useRef(0);
+  const dragging = useRef(false);
   const moved = useRef(false);
 
   useEffect(() => {
@@ -63,29 +71,40 @@ const ErrorTab = () => {
     setDisplayType(null);
     setDisplayMessage(null);
     setDisplayTitle(null);
-    setDragY(0);
+    dragY.current = 0;
   };
 
   const onPointerDown = (e) => {
     startY.current = e.clientY;
     moved.current = false;
-    setDragging(true);
+    dragging.current = true;
+    if (cardRef.current) cardRef.current.style.transition = "none";
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
   const onPointerMove = (e) => {
-    if (!dragging) return;
-    const dy = e.clientY - startY.current;
+    if (!dragging.current || !cardRef.current) return;
+    const dy = Math.min(0, e.clientY - startY.current); // upwards only
     if (Math.abs(dy) > 4) moved.current = true;
-    setDragY(Math.min(0, dy)); // only allow dragging upwards
+    dragY.current = dy;
+    cardRef.current.style.transform = `translate3d(0, ${dy}px, 0)`;
+    cardRef.current.style.opacity = String(Math.max(0.3, 1 + dy / 160));
   };
 
   const onPointerUp = () => {
-    setDragging(false);
-    if (dragY < -SWIPE_DISMISS_PX) {
+    if (!dragging.current) return;
+    dragging.current = false;
+    const el = cardRef.current;
+
+    if (dragY.current < -SWIPE_DISMISS_PX) {
       dispatch(hideAlert());
     } else {
-      setDragY(0);
+      if (el) {
+        el.style.transition = `transform 0.25s ${IOS_EASE_OUT}, opacity 0.25s ease`;
+        el.style.transform = "translate3d(0, 0, 0)";
+        el.style.opacity = "1";
+      }
+      dragY.current = 0;
       if (!moved.current) dispatch(hideAlert()); // plain tap closes it
     }
   };
@@ -94,11 +113,12 @@ const ErrorTab = () => {
 
   const { color, Icon, title: defaultTitle } =
     ALERT_STYLES[displayType] || ALERT_STYLES.info;
+  const autoHide = duration || DEFAULT_DURATION;
 
   return (
     <Snackbar
       open={open}
-      autoHideDuration={duration || 3500}
+      autoHideDuration={autoHide}
       onClose={handleClose}
       anchorOrigin={{ vertical: "top", horizontal: "center" }}
       TransitionComponent={Slide}
@@ -120,9 +140,9 @@ const ErrorTab = () => {
         px: 2,
       }}
     >
-      {/* outer box is animated by Slide; inner card handles the swipe */}
       <Box sx={{ width: "100%", maxWidth: { xs: 420, sm: 440 } }}>
         <Box
+          ref={cardRef}
           role="alert"
           aria-live="polite"
           onPointerDown={onPointerDown}
@@ -130,6 +150,8 @@ const ErrorTab = () => {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           sx={{
+            position: "relative",
+            overflow: "hidden", // clips the loader to the corners
             display: "flex",
             alignItems: "center",
             gap: 1.5,
@@ -140,22 +162,20 @@ const ErrorTab = () => {
             cursor: "pointer",
             userSelect: "none",
             touchAction: "none",
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            backdropFilter: "saturate(180%) blur(24px)",
-            WebkitBackdropFilter: "saturate(180%) blur(24px)",
+            // lighter blur is much cheaper to animate than a heavy one
+            backgroundColor: "rgba(255, 255, 255, 0.94)",
+            backdropFilter: "saturate(160%) blur(12px)",
+            WebkitBackdropFilter: "saturate(160%) blur(12px)",
             border: "1px solid rgba(209, 209, 214, 0.7)",
             borderRadius: "8px",
             boxShadow:
               "0 10px 30px rgba(28, 28, 30, 0.14), 0 1px 3px rgba(28, 28, 30, 0.06)",
             fontFamily:
               "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif",
-            transform: `translateY(${dragY}px)`,
-            opacity: 1 + dragY / 160,
-            transition: dragging
-              ? "none"
-              : `transform 0.25s ${IOS_EASE_OUT}, opacity 0.25s ease`,
-            // "backwards" so the animation doesn't override the drag transform afterwards
+            willChange: "transform, opacity",
+            transform: "translate3d(0, 0, 0)",
             animation: `${cardIn} 0.35s ${IOS_EASE_OUT} backwards`,
+            "&:hover .alert-loader": { animationPlayState: "paused" },
             "@media (prefers-reduced-motion: reduce)": { animation: "none" },
           }}
         >
@@ -185,7 +205,6 @@ const ErrorTab = () => {
               sx={{
                 fontSize: "14px",
                 lineHeight: "19px",
-                fontWeight: 400,
                 color: "rgba(28, 28, 30, 0.72)",
                 fontFamily: "inherit",
                 wordBreak: "break-word",
@@ -194,6 +213,25 @@ const ErrorTab = () => {
               {displayMessage}
             </Typography>
           </Box>
+
+          {/* loader: restarts for each new message */}
+          <Box
+            key={`${displayType}-${displayMessage}`}
+            className="alert-loader"
+            aria-hidden="true"
+            sx={{
+              position: "absolute",
+              left: 0,
+              bottom: 0,
+              width: "100%",
+              height: "3px",
+              backgroundColor: color,
+              opacity: 0.85,
+              transformOrigin: "left center",
+              willChange: "transform",
+              animation: `${drain} ${autoHide}ms linear forwards`,
+            }}
+          />
         </Box>
       </Box>
     </Snackbar>
