@@ -1,13 +1,18 @@
-
 import { useState, useEffect } from "react";
-import { Snackbar, Alert, LinearProgress, Box } from "@mui/material";
+import {
+  Snackbar,
+  Alert,
+  LinearProgress,
+  Box,
+} from "@mui/material";
 import { useSelector, useDispatch } from "react-redux";
 import { hideAlert } from "../redux/features/alertSlice";
 
 const ErrorTab = () => {
-  const { message, type, open, duration } = useSelector(
+  const { message, type, open } = useSelector(
     (state) => state.alert
   );
+
   const dispatch = useDispatch();
 
   const [displayType, setDisplayType] = useState(null);
@@ -17,29 +22,30 @@ const ErrorTab = () => {
   const notificationDuration = 3000;
 
   useEffect(() => {
-    if (open && type && message) {
-      setDisplayType(type);
-      setDisplayMessage(message);
-      setProgress(100);
+    if (!open || !type || !message) return;
 
-      const startTime = Date.now();
+    setDisplayType(type);
+    setDisplayMessage(message);
+    setProgress(100);
 
-      const interval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(
-          0,
-          100 - (elapsed / notificationDuration) * 100
-        );
+    const startTime = Date.now();
 
-        setProgress(remaining);
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
 
-        if (remaining <= 0) {
-          clearInterval(interval);
-        }
-      }, 30);
+      const remaining = Math.max(
+        0,
+        100 - (elapsed / notificationDuration) * 100
+      );
 
-      return () => clearInterval(interval);
-    }
+      setProgress(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+      }
+    }, 16);
+
+    return () => clearInterval(interval);
   }, [open, type, message]);
 
   const handleClose = (event, reason) => {
@@ -65,21 +71,25 @@ const ErrorTab = () => {
           backgroundColor: "#319B6A",
           color: "#FFFFFF",
         };
+
       case "error":
         return {
           backgroundColor: "#C12C2C",
           color: "#FFFFFF",
         };
+
       case "warning":
         return {
           backgroundColor: "#FFB300",
           color: "#222222",
         };
+
       case "info":
         return {
           backgroundColor: "#3B9C9C",
           color: "#FFFFFF",
         };
+
       default:
         return {
           backgroundColor: "#1B263B",
@@ -95,7 +105,10 @@ const ErrorTab = () => {
       open={open}
       autoHideDuration={notificationDuration}
       onClose={handleClose}
-      anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      anchorOrigin={{
+        vertical: "top",
+        horizontal: "center",
+      }}
       sx={{
         top: { xs: "80px", sm: "80px" },
         zIndex: 1400,
@@ -103,9 +116,12 @@ const ErrorTab = () => {
     >
       <Box
         sx={{
-          width: "fit-content",
+          width: "100%",
           minWidth: { xs: "300px", sm: "400px" },
-          maxWidth: { xs: "calc(100vw - 32px)", sm: "500px" },
+          maxWidth: {
+            xs: "calc(100vw - 32px)",
+            sm: "500px",
+          },
           overflow: "hidden",
           borderRadius: "8px",
           boxShadow: "0 4px 12px rgba(27, 38, 59, 0.15)",
@@ -123,15 +139,18 @@ const ErrorTab = () => {
             borderRadius: 0,
             backgroundColor: alertConfig.backgroundColor,
             color: alertConfig.color,
+
             "& .MuiAlert-icon": {
               fontSize: "24px",
               color: alertConfig.color,
             },
+
             "& .MuiAlert-message": {
               display: "flex",
               alignItems: "center",
               color: alertConfig.color,
             },
+
             "& .MuiAlert-action": {
               color: alertConfig.color,
             },
@@ -140,15 +159,18 @@ const ErrorTab = () => {
           {displayMessage}
         </Alert>
 
+        {/* Animated countdown loader */}
         <LinearProgress
           variant="determinate"
           value={progress}
           sx={{
             height: "4px",
             backgroundColor: "rgba(255, 255, 255, 0.25)",
+
             "& .MuiLinearProgress-bar": {
               backgroundColor: alertConfig.color,
-              transition: "transform 30ms linear",
+              transition: "transform 16ms linear",
+              borderRadius: "0 4px 4px 0",
             },
           }}
         />
