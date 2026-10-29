@@ -11,6 +11,7 @@ import BarberDashboard from "./pages/BarberDashboard.jsx";
 import UserDashboard from "./pages/UserDashboard.jsx";
 import PageNotFound from "./pages/PageNotFound.jsx";
 import BarberRegister from "./pages/BarberRegister.jsx";
+import Contact from "./pages/Contact.jsx";
 
 // Components
 import Spinner from "./components/Spinner.jsx";
@@ -27,6 +28,7 @@ import {
   fetchServicesSuccess,
   fetchServicesFailure,
 } from "./redux/features/serviceSlice";
+
 
 axios.defaults.baseURL = import.meta.env.VITE_API_URL ?? "";
 axios.defaults.withCredentials = true;
@@ -118,6 +120,8 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/barber/dashboard" element={<BarberDashboard />} />
               <Route path="/user/dashboard" element={<UserDashboard />} />
+              <Route path="/contact" element={<Contact />} />
+
             </Route>
 
             <Route element={<PublicRoutes />}>

@@ -28,7 +28,7 @@ const Home = () => {
 
   const getUserData = async () => {
     const token = localStorage.getItem('token');
-    if (!token) {
+    if (!token) { 
       navigate('/barber/login');
       return;
     }
