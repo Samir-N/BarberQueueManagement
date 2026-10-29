@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Snackbar, Box, Typography, Slide } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -15,39 +15,44 @@ const iconPop = keyframes`
 `;
 
 const cardIn = keyframes`
-  from { opacity: 0; transform: scale(0.96); }
+  from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1); }
 `;
 
-const shrink = keyframes`
-  from { transform: scaleX(1); }
-  to   { transform: scaleX(0); }
-`;
-
 const ALERT_STYLES = {
-  success: { color: "#34C759", Icon: CheckCircleRoundedIcon },
-  error:   { color: "#FF3B30", Icon: CancelRoundedIcon },
-  warning: { color: "#FFB300", Icon: WarningRoundedIcon },
-  info:    { color: "#007AFF", Icon: InfoRoundedIcon },
+  success: { color: "#34C759", Icon: CheckCircleRoundedIcon, title: "Success" },
+  error:   { color: "#FF3B30", Icon: CancelRoundedIcon,      title: "Something went wrong" },
+  warning: { color: "#FFB300", Icon: WarningRoundedIcon,     title: "Heads up" },
+  info:    { color: "#007AFF", Icon: InfoRoundedIcon,        title: "Info" },
 };
 
 const IOS_EASE_OUT = "cubic-bezier(0.32, 0.72, 0, 1)";
 const TOP_OFFSET = { xs: 12, sm: 16 };
-const DEFAULT_DURATION = 3500;
+const SWIPE_DISMISS_PX = 30;
 
 const ErrorTab = () => {
-  const { message, type, open, duration } = useSelector((state) => state.alert);
+  const { message, type, open, duration, title } = useSelector(
+    (state) => state.alert
+  );
   const dispatch = useDispatch();
 
   const [displayType, setDisplayType] = useState(null);
   const [displayMessage, setDisplayMessage] = useState(null);
+  const [displayTitle, setDisplayTitle] = useState(null);
+
+  // swipe-up-to-dismiss state
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startY = useRef(0);
+  const moved = useRef(false);
 
   useEffect(() => {
     if (open && type && message) {
       setDisplayType(type);
       setDisplayMessage(message);
+      setDisplayTitle(title || null);
     }
-  }, [open, type, message]);
+  }, [open, type, message, title]);
 
   const handleClose = (event, reason) => {
     if (reason === "clickaway") return;
@@ -57,17 +62,43 @@ const ErrorTab = () => {
   const handleExited = () => {
     setDisplayType(null);
     setDisplayMessage(null);
+    setDisplayTitle(null);
+    setDragY(0);
+  };
+
+  const onPointerDown = (e) => {
+    startY.current = e.clientY;
+    moved.current = false;
+    setDragging(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const onPointerMove = (e) => {
+    if (!dragging) return;
+    const dy = e.clientY - startY.current;
+    if (Math.abs(dy) > 4) moved.current = true;
+    setDragY(Math.min(0, dy)); // only allow dragging upwards
+  };
+
+  const onPointerUp = () => {
+    setDragging(false);
+    if (dragY < -SWIPE_DISMISS_PX) {
+      dispatch(hideAlert());
+    } else {
+      setDragY(0);
+      if (!moved.current) dispatch(hideAlert()); // plain tap closes it
+    }
   };
 
   if (!displayType || !displayMessage) return null;
 
-  const { color, Icon } = ALERT_STYLES[displayType] || ALERT_STYLES.info;
-  const autoHide = duration || DEFAULT_DURATION;
+  const { color, Icon, title: defaultTitle } =
+    ALERT_STYLES[displayType] || ALERT_STYLES.info;
 
   return (
     <Snackbar
       open={open}
-      autoHideDuration={autoHide}
+      autoHideDuration={duration || 3500}
       onClose={handleClose}
       anchorOrigin={{ vertical: "top", horizontal: "center" }}
       TransitionComponent={Slide}
@@ -89,81 +120,81 @@ const ErrorTab = () => {
         px: 2,
       }}
     >
-      <Box
-        role="alert"
-        aria-live="polite"
-        onClick={handleClose}
-        sx={{
-          position: "relative",
-          overflow: "hidden", // keeps the loader inside the corners
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          width: "100%",
-          minWidth: { xs: 0, sm: 340 },
-          maxWidth: { xs: 420, sm: 440 },
-          px: 2,
-          py: 1.5,
-          cursor: "pointer",
-          userSelect: "none",
-          backgroundColor: "rgba(255, 255, 255, 0.92)",
-          backdropFilter: "saturate(180%) blur(20px)",
-          WebkitBackdropFilter: "saturate(180%) blur(20px)",
-          border: "1px solid rgba(209, 209, 214, 0.7)",
-          borderRadius: "8px",
-          boxShadow:
-            "0 8px 24px rgba(28, 28, 30, 0.12), 0 1px 3px rgba(28, 28, 30, 0.06)",
-          fontFamily:
-            "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif",
-          animation: `${cardIn} 0.35s ${IOS_EASE_OUT} both`,
-          transition: "transform 0.15s ease",
-          "&:active": { transform: "scale(0.98)" },
-          // hovering pauses the auto-hide timer, so pause the loader too
-          "&:hover .alert-loader": { animationPlayState: "paused" },
-          "@media (prefers-reduced-motion: reduce)": { animation: "none" },
-        }}
-      >
-        <Icon
+      {/* outer box is animated by Slide; inner card handles the swipe */}
+      <Box sx={{ width: "100%", maxWidth: { xs: 420, sm: 440 } }}>
+        <Box
+          role="alert"
+          aria-live="polite"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
           sx={{
-            flexShrink: 0,
-            fontSize: 26,
-            color,
-            animation: `${iconPop} 0.45s ${IOS_EASE_OUT} 0.1s both`,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            width: "100%",
+            minWidth: { xs: 0, sm: 340 },
+            px: 2,
+            py: 1.5,
+            cursor: "pointer",
+            userSelect: "none",
+            touchAction: "none",
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            backdropFilter: "saturate(180%) blur(24px)",
+            WebkitBackdropFilter: "saturate(180%) blur(24px)",
+            border: "1px solid rgba(209, 209, 214, 0.7)",
+            borderRadius: "8px",
+            boxShadow:
+              "0 10px 30px rgba(28, 28, 30, 0.14), 0 1px 3px rgba(28, 28, 30, 0.06)",
+            fontFamily:
+              "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif",
+            transform: `translateY(${dragY}px)`,
+            opacity: 1 + dragY / 160,
+            transition: dragging
+              ? "none"
+              : `transform 0.25s ${IOS_EASE_OUT}, opacity 0.25s ease`,
+            // "backwards" so the animation doesn't override the drag transform afterwards
+            animation: `${cardIn} 0.35s ${IOS_EASE_OUT} backwards`,
             "@media (prefers-reduced-motion: reduce)": { animation: "none" },
           }}
-        />
-
-        <Typography
-          sx={{
-            flex: 1,
-            fontSize: "15px",
-            lineHeight: "21px",
-            fontWeight: 500,
-            color: "#1C1C1E",
-            fontFamily: "inherit",
-            wordBreak: "break-word",
-          }}
         >
-          {displayMessage}
-        </Typography>
+          <Icon
+            sx={{
+              flexShrink: 0,
+              fontSize: 28,
+              color,
+              animation: `${iconPop} 0.45s ${IOS_EASE_OUT} 0.1s both`,
+              "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+            }}
+          />
 
-        {/* loader line: restarts for every new message */}
-        <Box
-          key={displayMessage}
-          className="alert-loader"
-          aria-hidden="true"
-          sx={{
-            position: "absolute",
-            left: 0,
-            bottom: 0,
-            width: "100%",
-            height: "3px",
-            backgroundColor: color,
-            opacity: 0.85,
-            transformOrigin: "left center",
-            animation: `${shrink} ${autoHide}ms linear forwards`,
-          }}
-        />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontSize: "14.5px",
+                lineHeight: "20px",
+                fontWeight: 600,
+                color: "#1C1C1E",
+                fontFamily: "inherit",
+              }}
+            >
+              {displayTitle || defaultTitle}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: "14px",
+                lineHeight: "19px",
+                fontWeight: 400,
+                color: "rgba(28, 28, 30, 0.72)",
+                fontFamily: "inherit",
+                wordBreak: "break-word",
+              }}
+            >
+              {displayMessage}
+            </Typography>
+          </Box>
+        </Box>
       </Box>
     </Snackbar>
   );
