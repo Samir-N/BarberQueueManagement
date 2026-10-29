@@ -1,25 +1,29 @@
 import { useState, useEffect } from "react";
-import { Snackbar, Box, Typography, IconButton, Slide } from "@mui/material";
+import { Snackbar, Box, Typography, Slide } from "@mui/material";
 import { keyframes } from "@mui/material/styles";
-import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import PriorityHighRoundedIcon from "@mui/icons-material/PriorityHighRounded";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import CancelRoundedIcon from "@mui/icons-material/CancelRounded";
+import WarningRoundedIcon from "@mui/icons-material/WarningRounded";
+import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
 import { useSelector, useDispatch } from "react-redux";
 import { hideAlert } from "../redux/features/alertSlice";
 
-const popIn = keyframes`
-  0%   { transform: scale(0.5); opacity: 0; }
-  60%  { transform: scale(1.12); opacity: 1; }
-  100% { transform: scale(1); }
+const iconPop = keyframes`
+  0%   { transform: scale(0.4); opacity: 0; }
+  65%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 `;
 
+// status colours come from the design system
 const ALERT_STYLES = {
-  success: { color: "#319B6A", bg: "rgba(49, 155, 106, 0.12)", Icon: CheckRoundedIcon },
-  error:   { color: "#C12C2C", bg: "rgba(193, 44, 44, 0.12)",  Icon: CloseRoundedIcon },
-  warning: { color: "#E09A00", bg: "rgba(255, 179, 0, 0.16)",  Icon: PriorityHighRoundedIcon },
-  info:    { color: "#3B9C9C", bg: "rgba(59, 156, 156, 0.12)", Icon: InfoOutlinedIcon },
+  success: { color: "#34C759", Icon: CheckCircleRoundedIcon },
+  error:   { color: "#FF3B30", Icon: CancelRoundedIcon },
+  warning: { color: "#FFB300", Icon: WarningRoundedIcon },
+  info:    { color: "#007AFF", Icon: InfoRoundedIcon },
 };
+
+// iOS-style easing
+const IOS_EASE_OUT = "cubic-bezier(0.32, 0.72, 0, 1)";
 
 const ErrorTab = () => {
   const { message, type, open, duration } = useSelector((state) => state.alert);
@@ -40,7 +44,7 @@ const ErrorTab = () => {
     dispatch(hideAlert());
   };
 
-  // clear content only after the exit animation has finished
+  // clear content only after the exit animation finishes
   const handleExited = () => {
     setDisplayType(null);
     setDisplayMessage(null);
@@ -48,7 +52,7 @@ const ErrorTab = () => {
 
   if (!displayType || !displayMessage) return null;
 
-  const { color, bg, Icon } = ALERT_STYLES[displayType] || ALERT_STYLES.info;
+  const { color, Icon } = ALERT_STYLES[displayType] || ALERT_STYLES.info;
 
   return (
     <Snackbar
@@ -57,42 +61,47 @@ const ErrorTab = () => {
       onClose={handleClose}
       anchorOrigin={{ vertical: "top", horizontal: "center" }}
       TransitionComponent={Slide}
-      TransitionProps={{ direction: "down", onExited: handleExited }}
+      TransitionProps={{
+        direction: "down",
+        onExited: handleExited,
+        easing: { enter: IOS_EASE_OUT, exit: "cubic-bezier(0.4, 0, 1, 1)" },
+        timeout: { enter: 450, exit: 250 },
+      }}
       sx={{ top: { xs: "80px", sm: "80px" }, zIndex: 1400 }}
     >
       <Box
         role="alert"
+        aria-live="polite"
+        onClick={handleClose}
         sx={{
           display: "flex",
           alignItems: "center",
           gap: 1.5,
-          minWidth: { xs: 280, sm: 360 },
+          minWidth: { xs: 290, sm: 360 },
           maxWidth: { xs: "calc(100vw - 32px)", sm: 480 },
-          py: 1.25,
-          pl: 1.5,
-          pr: 1,
-          backgroundColor: "#FFFFFF",
-          border: "1px solid rgba(27, 38, 59, 0.08)",
-          borderRadius: "12px",
-          boxShadow: "0 8px 24px rgba(27, 38, 59, 0.12)",
+          px: 2,
+          py: 1.5,
+          cursor: "pointer",
+          // frosted glass, neutral, no status colour on the card
+          backgroundColor: "rgba(255, 255, 255, 0.85)",
+          backdropFilter: "saturate(180%) blur(20px)",
+          WebkitBackdropFilter: "saturate(180%) blur(20px)",
+          border: "1px solid rgba(209, 209, 214, 0.7)",
+          borderRadius: "16px",
+          boxShadow: "0 8px 24px rgba(28, 28, 30, 0.12)",
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif",
         }}
       >
-        <Box
+        <Icon
           sx={{
             flexShrink: 0,
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            backgroundColor: bg,
+            fontSize: 26,
             color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            animation: `${popIn} 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both`,
+            animation: `${iconPop} 0.45s ${IOS_EASE_OUT} 0.12s both`,
+            "@media (prefers-reduced-motion: reduce)": { animation: "none" },
           }}
-        >
-          <Icon sx={{ fontSize: 20 }} />
-        </Box>
+        />
 
         <Typography
           sx={{
@@ -100,20 +109,12 @@ const ErrorTab = () => {
             fontSize: "15px",
             lineHeight: "22px",
             fontWeight: 500,
-            color: "#1B263B",
+            color: "#1C1C1E",
+            fontFamily: "inherit",
           }}
         >
           {displayMessage}
         </Typography>
-
-        <IconButton
-          size="small"
-          onClick={handleClose}
-          aria-label="close"
-          sx={{ color: "rgba(27, 38, 59, 0.45)", "&:hover": { color: "#1B263B" } }}
-        >
-          <CloseRoundedIcon sx={{ fontSize: 18 }} />
-        </IconButton>
       </Box>
     </Snackbar>
   );
