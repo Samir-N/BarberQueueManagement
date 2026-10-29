@@ -19,6 +19,11 @@ const cardIn = keyframes`
   to   { opacity: 1; transform: scale(1); }
 `;
 
+const shrink = keyframes`
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+`;
+
 const ALERT_STYLES = {
   success: { color: "#34C759", Icon: CheckCircleRoundedIcon },
   error:   { color: "#FF3B30", Icon: CancelRoundedIcon },
@@ -27,9 +32,8 @@ const ALERT_STYLES = {
 };
 
 const IOS_EASE_OUT = "cubic-bezier(0.32, 0.72, 0, 1)";
-
-// one place to control how far from the top the popup sits
 const TOP_OFFSET = { xs: 12, sm: 16 };
+const DEFAULT_DURATION = 3500;
 
 const ErrorTab = () => {
   const { message, type, open, duration } = useSelector((state) => state.alert);
@@ -58,11 +62,12 @@ const ErrorTab = () => {
   if (!displayType || !displayMessage) return null;
 
   const { color, Icon } = ALERT_STYLES[displayType] || ALERT_STYLES.info;
+  const autoHide = duration || DEFAULT_DURATION;
 
   return (
     <Snackbar
       open={open}
-      autoHideDuration={duration || 3500}
+      autoHideDuration={autoHide}
       onClose={handleClose}
       anchorOrigin={{ vertical: "top", horizontal: "center" }}
       TransitionComponent={Slide}
@@ -73,7 +78,6 @@ const ErrorTab = () => {
         timeout: { enter: 400, exit: 220 },
       }}
       sx={{
-        // sits close to the top, and clears the notch on phones
         top: {
           xs: `calc(env(safe-area-inset-top, 0px) + ${TOP_OFFSET.xs}px) !important`,
           sm: `${TOP_OFFSET.sm}px !important`,
@@ -90,6 +94,8 @@ const ErrorTab = () => {
         aria-live="polite"
         onClick={handleClose}
         sx={{
+          position: "relative",
+          overflow: "hidden", // keeps the loader inside the corners
           display: "flex",
           alignItems: "center",
           gap: 1.5,
@@ -100,11 +106,11 @@ const ErrorTab = () => {
           py: 1.5,
           cursor: "pointer",
           userSelect: "none",
-          backgroundColor: "rgba(255, 255, 255, 0.88)",
+          backgroundColor: "rgba(255, 255, 255, 0.92)",
           backdropFilter: "saturate(180%) blur(20px)",
           WebkitBackdropFilter: "saturate(180%) blur(20px)",
           border: "1px solid rgba(209, 209, 214, 0.7)",
-          borderRadius: "18px",
+          borderRadius: "8px",
           boxShadow:
             "0 8px 24px rgba(28, 28, 30, 0.12), 0 1px 3px rgba(28, 28, 30, 0.06)",
           fontFamily:
@@ -112,6 +118,8 @@ const ErrorTab = () => {
           animation: `${cardIn} 0.35s ${IOS_EASE_OUT} both`,
           transition: "transform 0.15s ease",
           "&:active": { transform: "scale(0.98)" },
+          // hovering pauses the auto-hide timer, so pause the loader too
+          "&:hover .alert-loader": { animationPlayState: "paused" },
           "@media (prefers-reduced-motion: reduce)": { animation: "none" },
         }}
       >
@@ -138,6 +146,24 @@ const ErrorTab = () => {
         >
           {displayMessage}
         </Typography>
+
+        {/* loader line: restarts for every new message */}
+        <Box
+          key={displayMessage}
+          className="alert-loader"
+          aria-hidden="true"
+          sx={{
+            position: "absolute",
+            left: 0,
+            bottom: 0,
+            width: "100%",
+            height: "3px",
+            backgroundColor: color,
+            opacity: 0.85,
+            transformOrigin: "left center",
+            animation: `${shrink} ${autoHide}ms linear forwards`,
+          }}
+        />
       </Box>
     </Snackbar>
   );
