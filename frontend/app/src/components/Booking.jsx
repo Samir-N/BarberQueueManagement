@@ -106,7 +106,7 @@ const Booking = () => {
   const handleClose = () => {
     setOpen(false);
     dispatch(hideBooking());
-    navigate('/user/dashboard');
+  
   };
 
   const handleSubmit = async (e) => {
