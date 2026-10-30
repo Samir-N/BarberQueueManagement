@@ -318,7 +318,8 @@ const Navbar = () => {
                 fontSize: '16px',
                 py: 1.2,
                 boxShadow: '0 4px 6px rgba(15, 23, 42, 0.2)',
-                '&:hover': { backgroundColor: '#1E293B' },
+                '&:hover': { backgroundColor: '#1E293B', transform: 'none' },
+                '&:focus-visible': { outline: 'none' },
               }}
             >
               <LoginIcon sx={{ fontSize: '20px', mr: 1 }} />
@@ -562,7 +563,14 @@ const Navbar = () => {
                   alignItems: 'center',
                   gap: 1,
                   transition: 'all 0.2s ease',
-                 
+                  '&:hover': {
+                    backgroundColor: '#1E293B',
+                    boxShadow: '0 4px 6px rgba(15, 23, 42, 0.15)',
+                    transform: 'none',
+                  },
+                  '&:focus-visible': {
+                    outline: 'none',
+                  },
                 }}
               >
                 <LoginIcon sx={{ fontSize: '19px' }} />
