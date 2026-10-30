@@ -150,7 +150,7 @@ const Navbar = () => {
     } finally {
       dispatch(clearUser());
       setMobileOpen(false);
-      navigate('/barber/login');
+      navigate('/login');
     }
   };
 
@@ -309,7 +309,7 @@ const Navbar = () => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => handleNavigation('/barber/login')}
+              onClick={() => handleNavigation('/login')}
               sx={{
                 width: '100%',
                 justifyContent: 'center',
@@ -516,9 +516,6 @@ const Navbar = () => {
                 gap: 1,
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                  borderColor: 'rgba(239, 68, 68, 0.45)',
-                  color: '#EF4444',
                   transform: 'translateY(-1px)',
                 },
               }}
@@ -551,7 +548,7 @@ const Navbar = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => navigate('/barber/login')}
+                onClick={() => navigate('/login')}
                 sx={{
                   fontWeight: 600,
                   fontSize: '15px',
@@ -565,10 +562,7 @@ const Navbar = () => {
                   alignItems: 'center',
                   gap: 1,
                   transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: '#1E293B',
-                    boxShadow: '0 4px 6px rgba(15, 23, 42, 0.15)',
-                  },
+                 
                 }}
               >
                 <LoginIcon sx={{ fontSize: '19px' }} />
