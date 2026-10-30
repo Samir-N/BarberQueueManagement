@@ -140,18 +140,26 @@ const Home = () => {
               </Stack>
             </RoleGuard>
 
-            <RoleGuard allowedRoles={['barber']}>
-              <Box sx={{ width: '100%' }}>
-                <Button
-                  variant="primary"
-                  onClick={() => navigate('/barber/dashboard')}
-                  className="w-full h-12 justify-center gap-2 text-sm font-semibold shadow-xs"
-                >
-                  <DashboardIcon className="!text-[18px]" />
-                  <span>Barber Dashboard</span>
-                </Button>
-              </Box>
-            </RoleGuard>
+           <RoleGuard allowedRoles={['barber']}>
+  <Box sx={{ width: '100%', display: 'flex', flexDirection: 'row', gap: 2 }}>
+    <Button
+      variant="primary"
+      onClick={() => navigate('/barber/dashboard')}
+      className="flex-1 h-12 justify-center gap-2 text-sm font-semibold shadow-xs"
+    >
+      <DashboardIcon className="!text-[18px]" />
+      <span>Barber Dashboard</span>
+    </Button>
+    <Button
+      variant="secondary"
+      onClick={() => navigate('/barber/dashboard')}
+      className="flex-1 h-12 justify-center gap-2 text-sm font-semibold shadow-xs"
+    >
+      <DashboardIcon className="!text-[18px]" />
+      <span>View Analytics</span>
+    </Button>
+  </Box>
+</RoleGuard>
 
             <RoleGuard allowedRoles={['user']}>
               <Box
