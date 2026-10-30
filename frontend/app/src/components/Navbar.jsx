@@ -42,7 +42,7 @@ const harvardKeyframes = {
   },
 };
 
-/* Desktop nav links: soft lift, icon grow, small gold underline */
+/* Desktop nav links: simple neutral hover, thin navy underline when active */
 const navLinkSx = (active) => ({
   position: 'relative',
   display: 'inline-flex',
@@ -55,39 +55,36 @@ const navLinkSx = (active) => ({
   px: 2.5,
   py: 1,
   fontSize: '15px',
-  borderRadius: '8px',
+  borderRadius: 0,
   fontWeight: active ? 600 : 500,
   color: active ? '#0F172A' : '#64748B',
-  backgroundColor: active ? 'rgba(255, 195, 0, 0.18)' : 'transparent',
-  transition: `all 0.25s ${EASE}`,
+  backgroundColor: active ? 'rgba(15, 23, 42, 0.06)' : 'transparent',
+  transition: `background-color 0.2s ease, color 0.2s ease`,
   '& svg': {
     fontSize: '19px',
-    color: active ? '#0F172A' : 'inherit',
-    transition: `transform 0.25s ${EASE}`,
+    color: 'inherit',
   },
   '&::after': {
     content: '""',
     position: 'absolute',
-    left: '50%',
-    bottom: '4px',
+    left: 0,
+    right: 0,
+    bottom: 0,
     height: '2px',
-    width: active ? '18px' : '0px',
-    borderRadius: '2px',
-    backgroundColor: '#FFC300',
-    transform: 'translateX(-50%)',
-    transition: `width 0.25s ${EASE}`,
+    backgroundColor: '#0F172A',
+    transform: active ? 'scaleX(1)' : 'scaleX(0)',
+    transition: `transform 0.25s ${EASE}`,
   },
   '&:hover': {
     border: 'none',
     boxShadow: 'none',
+    transform: 'none',
     color: '#0F172A',
-    transform: 'translateY(-1px)',
-    backgroundColor: active ? 'rgba(255, 195, 0, 0.26)' : 'rgba(15, 23, 42, 0.05)',
-    '&::after': { width: '18px' },
-    '& svg': { transform: 'scale(1.1)' },
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
   },
   '&:active': {
-    transform: 'translateY(0) scale(0.97)',
+    transform: 'none',
+    backgroundColor: 'rgba(15, 23, 42, 0.09)',
   },
 });
 
@@ -97,7 +94,7 @@ const drawerItemSx = {
   overflow: 'hidden',
   py: 1.8,
   px: 2,
-  borderRadius: 1.5,
+  borderRadius: 0,
   transition: `all 0.25s ${EASE}`,
   '&::before': {
     content: '""',
@@ -375,8 +372,8 @@ const Navbar = () => {
                 color: '#0F172A',
                 p: 1,
                 transition: `all 0.2s ${EASE}`,
-                '&:hover': { transform: 'scale(1.1)', backgroundColor: 'rgba(255, 195, 0, 0.18)' },
-                '&:active': { transform: 'scale(0.94)' },
+                '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.05)' },
+                '&:active': { backgroundColor: 'rgba(15, 23, 42, 0.09)' },
               }}
             >
               <MenuIcon sx={{ fontSize: '28px' }} />
@@ -512,7 +509,7 @@ const Navbar = () => {
                 fontSize: '15px',
                 px: 2,
                 py: 1,
-                borderRadius: '8px',
+                borderRadius: 0,
                 color: '#64748B',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -540,7 +537,7 @@ const Navbar = () => {
                   fontSize: '15px',
                   px: 2.5,
                   py: 1,
-                  borderRadius: '8px',
+                  borderRadius: 0,
                   color: '#0F172A',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -560,7 +557,7 @@ const Navbar = () => {
                   fontSize: '15px',
                   px: 2.5,
                   py: 1,
-                  borderRadius: '8px',
+                  borderRadius: 0,
                   backgroundColor: '#0F172A',
                   color: '#FFFFFF',
                   boxShadow: '0 2px 4px rgba(15, 23, 42, 0.1)',
