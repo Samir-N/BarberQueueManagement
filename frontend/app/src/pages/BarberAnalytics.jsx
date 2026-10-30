@@ -3,32 +3,19 @@ import React, { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import dayjs from "dayjs";
 import {
-  Box,
-  Typography,
-  Stack,
-  ToggleButton,
-  ToggleButtonGroup,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
+  Box, Typography, Stack, ToggleButton, ToggleButtonGroup,
+  Table, TableBody, TableCell, TableContainer, TableHead,
+  TableRow, Chip,
 } from "@mui/material";
 import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
 } from "recharts";
 
 const C = {
   ink: "#213448",
   blue: "#547792",
   mist: "#94B4C1",
-  cream: "#EAE0CF",
   gold: "#D6A93A",
   red: "#C96B64",
   green: "#4F8A76",
@@ -39,96 +26,65 @@ const C = {
 
 const money = (n) => `NPR ${Number(n || 0).toLocaleString("en-IN")}`;
 
-const getStatus = (b) =>
-  String(b?.status || "pending").toLowerCase() === "rejected"
-    ? "cancelled"
-    : String(b?.status || "pending").toLowerCase();
+const statusOf = (b) => {
+  const s = String(b?.status || "pending").toLowerCase();
+  return s === "rejected" ? "cancelled" : s;
+};
 
-const getServiceName = (b) =>
+const serviceName = (b) =>
   typeof b?.service === "object"
     ? b.service?.serviceName || b.service?.name || "Other service"
     : b?.service || b?.serviceName || "Other service";
 
-const getPrice = (b) =>
-  Number(
-    b?.service?.price ??
-      b?.service?.servicePrice ??
-      b?.price ??
-      0
-  );
+const priceOf = (b) =>
+  Number(b?.service?.price ?? b?.service?.servicePrice ?? b?.price ?? 0);
 
-const getBarberId = (b) =>
+const barberIdOf = (b) =>
   typeof b?.barberId === "object"
     ? b.barberId?._id || b.barberId?.id
     : b?.barberId;
 
-const getCustomer = (b) => {
-  const user = b?.userId || b?.user || b?.customer;
-
+const customerOf = (b) => {
+  const u = b?.userId || b?.user || b?.customer;
   const name =
-    typeof user === "object"
-      ? user?.name ||
-        user?.fullName ||
-        [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-        user?.username
+    typeof u === "object"
+      ? u?.name || u?.fullName ||
+        [u?.firstName, u?.lastName].filter(Boolean).join(" ") ||
+        u?.username
       : b?.customerName || b?.name;
 
   return {
-    id:
-      typeof user === "object"
-        ? user?._id || user?.id
-        : user || b?.customerId || name || "unknown",
+    id: typeof u === "object" ? u?._id || u?.id : u || b?.customerId || name,
     name: name || "Unknown customer",
     phone:
-      (typeof user === "object" ? user?.phone || user?.phoneNumber : null) ||
-      b?.phone ||
-      b?.phoneNumber ||
-      "—",
+      (typeof u === "object" ? u?.phone || u?.phoneNumber : null) ||
+      b?.phone || b?.phoneNumber || "—",
   };
 };
 
 const Panel = ({ title, children }) => (
-  <Box
-    sx={{
-      bgcolor: "#fff",
-      p: { xs: 2, md: 2.5 },
-      borderRadius: 3,
-      border: `1px solid ${C.border}`,
-      minWidth: 0,
-    }}
-  >
-    <Typography
-      sx={{ color: C.ink, fontWeight: 800, fontSize: 16, mb: 2 }}
-    >
+  <Box sx={{
+    bgcolor: "#fff", p: { xs: 2, md: 2.5 },
+    border: `1px solid ${C.border}`, borderRadius: 3, minWidth: 0,
+  }}>
+    <Typography sx={{ fontWeight: 800, color: C.ink, mb: 2 }}>
       {title}
     </Typography>
     {children}
   </Box>
 );
 
-const StatCard = ({ title, value, subtitle, color = C.ink }) => (
-  <Box
-    sx={{
-      bgcolor: "#fff",
-      p: 2.2,
-      borderRadius: 3,
-      border: `1px solid ${C.border}`,
-      borderTop: `3px solid ${color}`,
-      minWidth: 0,
-    }}
-  >
-    <Typography sx={{ color: C.muted, fontSize: 12 }}>
-      {title}
-    </Typography>
-    <Typography
-      sx={{
-        mt: 1,
-        color,
-        fontWeight: 850,
-        fontSize: { xs: 21, md: 25 },
-        overflowWrap: "anywhere",
-      }}
-    >
+const StatCard = ({ title, value, color = C.ink, subtitle }) => (
+  <Box sx={{
+    bgcolor: "#fff", p: 2, borderRadius: 3,
+    border: `1px solid ${C.border}`, borderTop: `3px solid ${color}`,
+    minWidth: 0,
+  }}>
+    <Typography sx={{ color: C.muted, fontSize: 12 }}>{title}</Typography>
+    <Typography sx={{
+      mt: 1, color, fontWeight: 850,
+      fontSize: { xs: 21, md: 25 }, overflowWrap: "anywhere",
+    }}>
       {value}
     </Typography>
     {subtitle && (
@@ -147,91 +103,107 @@ const BarberAnalytics = () => {
   const [period, setPeriod] = useState("month");
 
   const bookings = useMemo(() => {
-    const userId = user?._id || user?.id;
-
-    if (user?.role !== "barber" || !userId) return allBookings;
-
+    const id = user?._id || user?.id;
+    if (user?.role !== "barber" || !id) return allBookings;
     return allBookings.filter(
-      (b) => String(getBarberId(b)) === String(userId)
+      (b) => String(barberIdOf(b)) === String(id)
     );
   }, [allBookings, user]);
 
   const report = useMemo(() => {
     const today = dayjs().endOf("day");
-    const start = dayjs()
-      .startOf("day")
-      .subtract(period === "week" ? 6 : 29, "day");
+    const start = dayjs().startOf("day").subtract(
+      period === "week" ? 6 : 29, "day"
+    );
 
-    const filtered = bookings.filter((b) => {
+    const current = bookings.filter((b) => {
       if (!b.bookingTime) return false;
-
       const date = dayjs(b.bookingTime);
-      return (
-        date.isValid() &&
-        !date.isBefore(start) &&
-        !date.isAfter(today)
-      );
+      return date.isValid() && !date.isBefore(start) && !date.isAfter(today);
     });
 
-    const completed = filtered.filter(
-      (b) => getStatus(b) === "completed"
+    const completed = current.filter(
+      (b) => statusOf(b) === "completed"
+    ).length;
+    const cancelled = current.filter(
+      (b) => statusOf(b) === "cancelled"
     ).length;
 
-    const cancelled = filtered.filter(
-      (b) => getStatus(b) === "cancelled"
-    ).length;
+    const income = current
+      .filter((b) => statusOf(b) === "completed")
+      .reduce((sum, b) => sum + priceOf(b), 0);
 
-    const income = filtered
-      .filter((b) => getStatus(b) === "completed")
-      .reduce((sum, b) => sum + getPrice(b), 0);
-
-    // Popular services
-    const serviceMap = {};
-
-    filtered.forEach((b) => {
-      const name = getServiceName(b);
-      serviceMap[name] = (serviceMap[name] || 0) + 1;
+    // One pie chart: services and booking counts
+    const serviceCounts = {};
+    current.forEach((b) => {
+      const name = serviceName(b);
+      serviceCounts[name] = (serviceCounts[name] || 0) + 1;
     });
 
-    const services = Object.entries(serviceMap)
+    const services = Object.entries(serviceCounts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
-    // Top customers ranked by number of bookings
+    // One graph: booking activity
+    const trend = Array.from(
+      { length: period === "week" ? 7 : 30 },
+      (_, i) => {
+        const date = start.add(i, "day");
+        return {
+          date: period === "week"
+            ? date.format("ddd")
+            : date.format("DD MMM"),
+          bookings: current.filter(
+            (b) => dayjs(b.bookingTime).isSame(date, "day")
+          ).length,
+        };
+      }
+    );
+
+    // Six monthly income cards
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const date = dayjs().startOf("month").subtract(5 - i, "month");
+      const monthBookings = bookings.filter(
+        (b) =>
+          b.bookingTime &&
+          dayjs(b.bookingTime).isValid() &&
+          dayjs(b.bookingTime).isSame(date, "month") &&
+          statusOf(b) === "completed"
+      );
+
+      return {
+        month: date.format("MMM YYYY"),
+        income: monthBookings.reduce((sum, b) => sum + priceOf(b), 0),
+      };
+    });
+
+    // Top customers by booking frequency
     const customerMap = {};
-
-    filtered.forEach((b) => {
-      const customer = getCustomer(b);
-
-      if (customer.name === "Unknown customer") return;
+    current.forEach((b) => {
+      const customer = customerOf(b);
+      if (!customer.id || customer.name === "Unknown customer") return;
 
       const key = String(customer.id);
-
       if (!customerMap[key]) {
         customerMap[key] = {
           ...customer,
           bookings: 0,
           completed: 0,
-          cancelled: 0,
           spent: 0,
           lastBooking: b.bookingTime,
         };
       }
 
-      const entry = customerMap[key];
-      entry.bookings += 1;
+      const item = customerMap[key];
+      item.bookings += 1;
 
-      if (getStatus(b) === "completed") {
-        entry.completed += 1;
-        entry.spent += getPrice(b);
+      if (statusOf(b) === "completed") {
+        item.completed += 1;
+        item.spent += priceOf(b);
       }
 
-      if (getStatus(b) === "cancelled") {
-        entry.cancelled += 1;
-      }
-
-      if (dayjs(b.bookingTime).isAfter(dayjs(entry.lastBooking))) {
-        entry.lastBooking = b.bookingTime;
+      if (dayjs(b.bookingTime).isAfter(dayjs(item.lastBooking))) {
+        item.lastBooking = b.bookingTime;
       }
     });
 
@@ -239,62 +211,30 @@ const BarberAnalytics = () => {
       .sort((a, b) => b.bookings - a.bookings)
       .slice(0, 10);
 
-    // Income cards for the last six calendar months
-    const months = Array.from({ length: 6 }, (_, i) => {
-      const date = dayjs()
-        .startOf("month")
-        .subtract(5 - i, "month");
-
-      const monthBookings = bookings.filter(
-        (b) =>
-          b.bookingTime &&
-          dayjs(b.bookingTime).isValid() &&
-          dayjs(b.bookingTime).isSame(date, "month") &&
-          getStatus(b) === "completed"
-      );
-
-      return {
-        month: date.format("MMM YYYY"),
-        income: monthBookings.reduce(
-          (sum, b) => sum + getPrice(b),
-          0
-        ),
-      };
-    });
-
     return {
-      total: filtered.length,
+      total: current.length,
       completed,
       cancelled,
       income,
-      cancellationRate: filtered.length
-        ? Math.round((cancelled / filtered.length) * 100)
+      cancellationRate: current.length
+        ? Math.round((cancelled / current.length) * 100)
         : 0,
       services,
-      customers,
+      trend,
       months,
+      customers,
     };
   }, [bookings, period]);
 
   const pieColors = [
-    C.blue,
-    C.gold,
-    C.mist,
-    C.green,
-    C.red,
-    "#8B83B5",
-    "#C58B65",
+    C.blue, C.gold, C.mist, C.green, C.red, "#8B83B5", "#C58B65",
   ];
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: C.bg,
-        p: { xs: 1.5, md: 4 },
-        pt: { xs: "85px", md: "100px" },
-      }}
-    >
+    <Box sx={{
+      minHeight: "100vh", bgcolor: C.bg,
+      p: { xs: 1.5, md: 4 }, pt: { xs: "85px", md: "100px" },
+    }}>
       <Box sx={{ maxWidth: 1400, mx: "auto" }}>
         {/* Header */}
         <Stack
@@ -305,13 +245,10 @@ const BarberAnalytics = () => {
           mb={3}
         >
           <Box>
-            <Typography
-              sx={{
-                fontSize: { xs: 27, md: 34 },
-                fontWeight: 850,
-                color: C.ink,
-              }}
-            >
+            <Typography sx={{
+              fontSize: { xs: 27, md: 34 },
+              fontWeight: 850, color: C.ink,
+            }}>
               Analytics Report
             </Typography>
             <Typography sx={{ color: C.muted, fontSize: 13 }}>
@@ -337,99 +274,96 @@ const BarberAnalytics = () => {
           </ToggleButtonGroup>
         </Stack>
 
-        {/* Summary cards */}
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "repeat(2, minmax(0, 1fr))",
-              lg: "repeat(4, minmax(0, 1fr))",
-            },
-            gap: 1.5,
-            mb: 2,
-          }}
-        >
+        {/* Normal statistic cards */}
+        <Box sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(2, minmax(0, 1fr))",
+            lg: "repeat(4, minmax(0, 1fr))",
+          },
+          gap: 1.5, mb: 2,
+        }}>
+          <StatCard title="Total Bookings" value={report.total} color={C.blue} />
+          <StatCard title="Completed" value={report.completed} color={C.green} />
           <StatCard
-            title="Total Bookings"
-            value={report.total}
-            color={C.blue}
-          />
-          <StatCard
-            title="Completed"
-            value={report.completed}
-            color={C.green}
+            title="Cancelled"
+            value={report.cancelled}
+            color={C.red}
           />
           <StatCard
             title="Cancellation Rate"
             value={`${report.cancellationRate}%`}
-            color={C.red}
-          />
-          <StatCard
-            title="Income"
-            value={money(report.income)}
-            subtitle="Completed bookings only"
             color={C.gold}
           />
         </Box>
 
         {/* Monthly income cards */}
         <Panel title="Monthly Income">
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "repeat(2, minmax(0, 1fr))",
-                sm: "repeat(3, minmax(0, 1fr))",
-                lg: "repeat(6, minmax(0, 1fr))",
-              },
-              gap: 1.5,
-            }}
-          >
-            {report.months.map((month) => (
-              <Box
-                key={month.month}
-                sx={{
-                  p: 1.7,
-                  borderRadius: 2.5,
-                  bgcolor: C.bg,
-                  border: `1px solid ${C.border}`,
-                }}
-              >
-                <Typography sx={{ fontSize: 12, color: C.muted }}>
-                  {month.month}
+          <Box sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "repeat(2, minmax(0, 1fr))",
+              sm: "repeat(3, minmax(0, 1fr))",
+              lg: "repeat(6, minmax(0, 1fr))",
+            },
+            gap: 1.5,
+          }}>
+            {report.months.map((m) => (
+              <Box key={m.month} sx={{
+                p: 1.7, borderRadius: 2.5,
+                bgcolor: C.bg, border: `1px solid ${C.border}`,
+              }}>
+                <Typography sx={{ color: C.muted, fontSize: 12 }}>
+                  {m.month}
                 </Typography>
-                <Typography
-                  sx={{
-                    mt: 1,
-                    color: C.ink,
-                    fontWeight: 800,
-                    fontSize: { xs: 15, md: 17 },
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {money(month.income)}
+                <Typography sx={{
+                  mt: 1, fontWeight: 800, color: C.ink,
+                  fontSize: { xs: 15, md: 17 }, overflowWrap: "anywhere",
+                }}>
+                  {money(m.income)}
                 </Typography>
               </Box>
             ))}
           </Box>
         </Panel>
 
-        {/* Popular services pie chart */}
+        {/* ONE graph */}
+        <Box sx={{ mt: 2 }}>
+          <Panel title="Booking Activity">
+            <Box sx={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={report.trend}>
+                  <CartesianGrid stroke={C.border} strokeDasharray="4 4" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Line
+                    dataKey="bookings"
+                    name="Bookings"
+                    stroke={C.blue}
+                    strokeWidth={3}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Box>
+          </Panel>
+        </Box>
+
+        {/* ONE chart */}
         <Box sx={{ mt: 2 }}>
           <Panel title="Popular Services">
             {report.services.length ? (
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: "minmax(0, 1fr) minmax(0, 1fr)",
-                  },
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <Box sx={{ height: 270, minWidth: 0 }}>
+              <Box sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  md: "minmax(0, 1fr) minmax(0, 1fr)",
+                },
+                alignItems: "center",
+                gap: 2,
+              }}>
+                <Box sx={{ height: 280, minWidth: 0 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -448,10 +382,7 @@ const BarberAnalytics = () => {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value) => [
-                          `${value} booking${value === 1 ? "" : "s"}`,
-                          "Total",
-                        ]}
+                        formatter={(value) => [`${value} bookings`, "Total"]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -463,36 +394,22 @@ const BarberAnalytics = () => {
                       key={service.name}
                       direction="row"
                       alignItems="center"
-                      gap={1.2}
+                      gap={1}
                     >
-                      <Box
-                        sx={{
-                          width: 11,
-                          height: 11,
-                          flexShrink: 0,
-                          borderRadius: 1,
-                          bgcolor:
-                            pieColors[index % pieColors.length],
-                        }}
-                      />
-                      <Typography
-                        sx={{
-                          flex: 1,
-                          fontSize: 13,
-                          color: C.ink,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
+                      <Box sx={{
+                        width: 11, height: 11, borderRadius: 1,
+                        bgcolor: pieColors[index % pieColors.length],
+                        flexShrink: 0,
+                      }} />
+                      <Typography sx={{
+                        flex: 1, color: C.ink, fontSize: 13,
+                      }}>
                         {service.name}
                       </Typography>
                       <Chip
                         size="small"
                         label={`${service.count} bookings`}
-                        sx={{
-                          bgcolor: C.bg,
-                          fontWeight: 700,
-                          fontSize: 11,
-                        }}
+                        sx={{ bgcolor: C.bg, fontWeight: 700 }}
                       />
                     </Stack>
                   ))}
@@ -500,19 +417,17 @@ const BarberAnalytics = () => {
               </Box>
             ) : (
               <Typography sx={{ color: C.muted, py: 3 }}>
-                No bookings found for this period.
+                No services booked during this period.
               </Typography>
             )}
           </Panel>
         </Box>
 
-        {/* Top customers table */}
+        {/* ONE table */}
         <Box sx={{ mt: 2 }}>
           <Panel title="Top Customers">
-            <Typography
-              sx={{ color: C.muted, fontSize: 12, mb: 2 }}
-            >
-              Ranked by number of bookings during the selected period.
+            <Typography sx={{ color: C.muted, fontSize: 12, mb: 2 }}>
+              Ranked by booking frequency during the selected period.
             </Typography>
 
             {report.customers.length ? (
@@ -521,87 +436,41 @@ const BarberAnalytics = () => {
                   <TableHead>
                     <TableRow sx={{ bgcolor: C.bg }}>
                       {[
-                        "Rank",
-                        "Customer",
-                        "Phone",
-                        "Bookings",
-                        "Completed",
-                        "Amount Spent",
-                        "Last Booking",
+                        "Rank", "Customer", "Phone", "Bookings",
+                        "Completed", "Amount Spent", "Last Booking",
                       ].map((heading) => (
-                        <TableCell
-                          key={heading}
-                          sx={{
-                            fontWeight: 800,
-                            color: C.ink,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
+                        <TableCell key={heading} sx={{
+                          fontWeight: 800, color: C.ink, whiteSpace: "nowrap",
+                        }}>
                           {heading}
                         </TableCell>
                       ))}
                     </TableRow>
                   </TableHead>
-
                   <TableBody>
                     {report.customers.map((customer, index) => (
-                      <TableRow
-                        key={customer.id}
-                        hover
-                        sx={{
-                          "&:last-child td": { borderBottom: 0 },
-                        }}
-                      >
-                        <TableCell>
-                          <Box
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: "50%",
-                              bgcolor:
-                                index === 0
-                                  ? C.cream
-                                  : C.bg,
-                              color: C.ink,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontWeight: 800,
-                              fontSize: 12,
-                            }}
-                          >
-                            {index + 1}
-                          </Box>
-                        </TableCell>
-
-                        <TableCell sx={{ fontWeight: 700, color: C.ink }}>
-                          {customer.name}
-                        </TableCell>
-
-                        <TableCell sx={{ color: C.muted }}>
-                          {customer.phone}
-                        </TableCell>
-
+                      <TableRow key={customer.id} hover>
                         <TableCell>
                           <Chip
                             size="small"
-                            label={customer.bookings}
-                            sx={{ bgcolor: C.bg, fontWeight: 700 }}
+                            label={index + 1}
+                            sx={{
+                              bgcolor: index === 0 ? C.gold : C.bg,
+                              fontWeight: 800,
+                            }}
                           />
                         </TableCell>
-
+                        <TableCell sx={{ fontWeight: 700, color: C.ink }}>
+                          {customer.name}
+                        </TableCell>
+                        <TableCell>{customer.phone}</TableCell>
+                        <TableCell>{customer.bookings}</TableCell>
                         <TableCell>{customer.completed}</TableCell>
-
-                        <TableCell
-                          sx={{
-                            color: C.green,
-                            fontWeight: 800,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
+                        <TableCell sx={{
+                          color: C.green, fontWeight: 800, whiteSpace: "nowrap",
+                        }}>
                           {money(customer.spent)}
                         </TableCell>
-
                         <TableCell sx={{ whiteSpace: "nowrap" }}>
                           {dayjs(customer.lastBooking).format("DD MMM YYYY")}
                         </TableCell>
@@ -618,15 +487,10 @@ const BarberAnalytics = () => {
           </Panel>
         </Box>
 
-        <Typography
-          sx={{
-            textAlign: "center",
-            color: C.muted,
-            fontSize: 11,
-            mt: 3,
-          }}
-        >
-          Income includes completed bookings only.
+        <Typography sx={{
+          textAlign: "center", color: C.muted, fontSize: 11, mt: 3,
+        }}>
+          Income is calculated from completed bookings only.
         </Typography>
       </Box>
     </Box>
