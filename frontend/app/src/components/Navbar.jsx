@@ -538,28 +538,7 @@ const Navbar = () => {
                 variant="primary"
                 size="sm"
                 onClick={() => navigate('/login')}
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '15px',
-                  px: 2.5,
-                  py: 1,
-                  borderRadius: 0,
-                  backgroundColor: '#0F172A',
-                  color: '#FFFFFF',
-                  boxShadow: '0 2px 4px rgba(15, 23, 42, 0.1)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: '#1E293B',
-                    boxShadow: '0 4px 6px rgba(15, 23, 42, 0.15)',
-                    transform: 'none',
-                  },
-                  '&:focus-visible': {
-                    outline: 'none',
-                  },
-                }}
+             
               >
                 <LoginIcon sx={{ fontSize: '19px' }} />
                 Log In
