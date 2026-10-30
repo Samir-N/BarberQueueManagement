@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -6,7 +6,6 @@ import dayjs from "dayjs";
 import {
   Box,
   Typography,
-  Chip,
   Table,
   TableBody,
   TableCell,
@@ -21,7 +20,6 @@ import {
   useTheme,
   useMediaQuery,
   Divider,
-  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -32,91 +30,34 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
 import Button from "./Button";
 import { RoleGuard } from "./RoleGuard.jsx";
-import socket from "../socket/socket.js";
-import useSoundNotification from "../hooks/useSoundNotification";
 
-import {
-  bookingData,
-  addBooking,
-  deleteBooking,
-  updateBooking,
-  updateStatus,
-} from "../redux/features/bookingSlice.js";
+import { bookingData } from "../redux/features/bookingSlice.js";
 
 const WaitingList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const dispatch = useDispatch();
 
-  const playSound = useSoundNotification();
-
+  // Bookings are loaded + kept in sync (socket) by App.jsx
   const bookings = useSelector((state) => state.booking?.bookings || []);
   const user = useSelector((state) => state.auth?.user);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showOnlyMine, setShowOnlyMine] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState(false);
-  const [fetching, setFetching] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
 
+  // Used only to resync after a status change
   const fetchBookings = useCallback(async () => {
     try {
-      setFetching(true);
       const res = await axios.get("/api/v1/user/getBookings");
       if (res.data?.success) {
         dispatch(bookingData(res.data.data));
       }
     } catch (err) {
       console.error("Failed to fetch bookings:", err);
-    } finally {
-      setFetching(false);
     }
   }, [dispatch]);
-
-  useEffect(() => {
-    fetchBookings();
-  }, [fetchBookings]);
-
-  // Real-time socket events + targeted sound trigger
-  useEffect(() => {
-    const handleNewBooking = (booking) => {
-      dispatch(addBooking(booking));
-
-      // Extract the barber ID from the incoming booking object (handles populated object or plain string/ID)
-      const bookingBarberId = 
-        typeof booking?.barberId === "object" 
-          ? (booking.barberId?._id || booking.barberId?.id) 
-          : booking?.barberId;
-
-      const currentUserId = user?._id || user?.id;
-
-      // Play sound ONLY if the logged-in user is a barber AND matches the booking's assigned barberId
-      if (user?.role === "barber" && currentUserId && String(bookingBarberId) === String(currentUserId)) {
-        playSound();
-      }
-
-      if ("vibrate" in navigator) {
-      navigator.vibrate([300,100,300]);
-    }
-
-    };
-
-    const handleDeletedBooking = (booking) => dispatch(deleteBooking(booking));
-    const handleUpdatedBooking = (booking) => dispatch(updateBooking(booking));
-    const handleStatusUpdated = (booking) => dispatch(updateStatus(booking));
-
-    socket.on("bookingCreated", handleNewBooking);
-    socket.on("bookingDeleted", handleDeletedBooking);
-    socket.on("bookingUpdated", handleUpdatedBooking);
-    socket.on("bookingStatusUpdated", handleStatusUpdated);
-
-    return () => {
-      socket.off("bookingCreated", handleNewBooking);
-      socket.off("bookingDeleted", handleDeletedBooking);
-      socket.off("bookingUpdated", handleUpdatedBooking);
-      socket.off("bookingStatusUpdated", handleStatusUpdated);
-    };
-  }, [dispatch, user, playSound]);
 
   const getPublicUserId = (booking) => {
     if (booking?.userId?.publicId) {

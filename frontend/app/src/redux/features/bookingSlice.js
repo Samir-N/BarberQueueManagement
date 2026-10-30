@@ -25,9 +25,10 @@ const bookingSlice = createSlice({
       state.isVisible = false;
     },
 
-    // Add newly created booking
+    // Add newly created booking (ignores duplicates, e.g. event + refetch race)
     addBooking: (state, action) => {
-      state.bookings.push(action.payload);
+      const exists = state.bookings.some((b) => b._id === action.payload._id);
+      if (!exists) state.bookings.push(action.payload);
     },
 
     // Delete booking
