@@ -37,10 +37,10 @@ const Button = ({
       },
     },
     secondary: {
-      backgroundColor: '#0F172A',
+      backgroundColor: '#1e2838',
       color: '#FFFFFF',
       '&:hover': {
-        backgroundColor: '#1E293B',
+        backgroundColor: '#222a36',
         transform: 'translateY(-1.5px)',
       },
       '&:active': {
@@ -48,18 +48,22 @@ const Button = ({
       },
     },
     tertiary: {
-      backgroundColor: 'transparent',
-      color: '#475569',
-      border: '1px solid #E2E8F0',
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      color: '#0F172A',
+      border: '1px solid rgba(255, 255, 255, 0.25)',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
       '&:hover': {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        borderColor: 'rgba(255, 255, 255, 0.4)',
         color: '#0F172A',
-        backgroundColor: '#F8FAFC',
-        borderColor: '#CBD5E1',
         transform: 'translateY(-1.5px)',
+        boxShadow: '0 6px 15px -3px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
       },
       '&:active': {
         transform: 'translateY(0px)',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: 'rgba(255, 255, 255, 0.12)',
         boxShadow: 'none',
       },
     },
@@ -98,7 +102,7 @@ const Button = ({
       disableRipple={false}
       disableElevation
       sx={{
-        borderRadius: '6px',
+        borderRadius: '8px',
         fontWeight: 600,
         letterSpacing: '-0.01em',
         textTransform: 'none',
@@ -108,11 +112,11 @@ const Button = ({
         alignItems: 'center',
         justifyContent: 'center',
         gap: '8px',
-        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         cursor: disabled ? 'not-allowed' : 'pointer',
 
         '&:focus-visible': {
-          outline: '2px solid #2563EB',
+          outline: '2px solid #FFC300',
           outlineOffset: '2px',
         },
 
@@ -122,6 +126,7 @@ const Button = ({
           color: '#94A3B8',
           boxShadow: 'none',
           transform: 'none',
+          backdropFilter: 'none',
         },
 
         ...(variantStyles[variant] || variantStyles.primary),

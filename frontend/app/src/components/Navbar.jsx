@@ -9,8 +9,8 @@ import {
   List, 
   ListItem, 
   ListItemButton, 
-  ListItemIcon, 
   ListItemText, 
+  ListItemIcon, 
   Divider 
 } from "@mui/material";
 import { useSelector, useDispatch } from "react-redux";
@@ -172,7 +172,6 @@ const Navbar = () => {
               </ListItemButton>
             </ListItem>
 
-            {/* RoleGuard Protected Analytics Link in Mobile Drawer */}
             <RoleGuard allowedRoles={['barber']}>
               <ListItem 
                 disablePadding 
@@ -347,7 +346,7 @@ const Navbar = () => {
     );
   }
 
-  // Desktop View - Contained inside the 1280px max-width layout
+  // Desktop View
   return (
     <Box
       sx={{
@@ -358,6 +357,7 @@ const Navbar = () => {
         height: '64px',
         backgroundColor: '#FFFFFF',
         borderBottom: '1px solid #E2E8F0',
+        boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.03)',
         zIndex: 1100,
         display: 'flex',
         justifyContent: 'center',
@@ -377,11 +377,12 @@ const Navbar = () => {
           <Typography
             onClick={() => navigate('/')}
             sx={{
-              fontSize: '22px',
-              fontWeight: 600,
+              fontSize: '20px',
+              fontWeight: 700,
               color: '#0F172A',
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.025em',
               cursor: 'pointer',
+              transition: 'color 0.2s ease',
               '&:hover': { color: '#334155' },
             }}
           >
@@ -390,7 +391,7 @@ const Navbar = () => {
         </Box>
 
         {/* Nav Links */}
-        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 1.5 }}>
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 1 }}>
           {user && (
             <>
               <Button
@@ -400,27 +401,23 @@ const Navbar = () => {
                 sx={{
                   border: 'none',
                   color: isActive('/') ? '#0F172A' : '#64748B',
-                  fontWeight: 500,
-                  fontSize: '16px',
-                  position: 'relative',
-                  px: 2,
+                  fontWeight: isActive('/') ? 600 : 500,
+                  fontSize: '15px',
+                  px: 2.5,
+                  py: 1,
+                  borderRadius: '8px',
+                  backgroundColor: isActive('/') ? 'rgba(255, 195, 0, 0.15)' : 'transparent',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 1,
-                  '&::after': isActive('/') ? {
-                    content: '""',
-                    position: 'absolute',
-                    bottom: -12,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '60%',
-                    height: '3px',
-                    backgroundColor: '#FFC300',
-                    borderRadius: '2px 2px 0 0',
-                  } : {},
+                  gap: 1.25,
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  '&:hover': {
+                    backgroundColor: isActive('/') ? 'rgba(255, 195, 0, 0.22)' : 'rgba(15, 23, 42, 0.04)',
+                    color: '#0F172A',
+                  },
                 }}
               >
-                <HomeIcon sx={{ fontSize: '20px' }} />
+                <HomeIcon sx={{ fontSize: '19px', color: isActive('/') ? '#0F172A' : 'inherit' }} />
                 Home
               </Button>
 
@@ -431,31 +428,26 @@ const Navbar = () => {
                 sx={{
                   border: 'none',
                   color: isActive(dashboardPath) ? '#0F172A' : '#64748B',
-                  fontWeight: 500,
-                  fontSize: '16px',
-                  position: 'relative',
-                  px: 2,
+                  fontWeight: isActive(dashboardPath) ? 600 : 500,
+                  fontSize: '15px',
+                  px: 2.5,
+                  py: 1,
+                  borderRadius: '8px',
+                  backgroundColor: isActive(dashboardPath) ? 'rgba(255, 195, 0, 0.15)' : 'transparent',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 1,
-                  '&::after': isActive(dashboardPath) ? {
-                    content: '""',
-                    position: 'absolute',
-                    bottom: -12,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '60%',
-                    height: '3px',
-                    backgroundColor: '#FFC300',
-                    borderRadius: '2px 2px 0 0',
-                  } : {},
+                  gap: 1.25,
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  '&:hover': {
+                    backgroundColor: isActive(dashboardPath) ? 'rgba(255, 195, 0, 0.22)' : 'rgba(15, 23, 42, 0.04)',
+                    color: '#0F172A',
+                  },
                 }}
               >
-                <DashboardIcon sx={{ fontSize: '20px' }} />
+                <DashboardIcon sx={{ fontSize: '19px', color: isActive(dashboardPath) ? '#0F172A' : 'inherit' }} />
                 Dashboard
               </Button>
 
-              {/* RoleGuard Protected Analytics Link in Desktop Navbar */}
               <RoleGuard allowedRoles={['barber']}>
                 <Button
                   variant="tertiary"
@@ -464,27 +456,23 @@ const Navbar = () => {
                   sx={{
                     border: 'none',
                     color: isActive('/barber/viewAnalytics') ? '#0F172A' : '#64748B',
-                    fontWeight: 500,
-                    fontSize: '16px',
-                    position: 'relative',
-                    px: 2,
+                    fontWeight: isActive('/barber/viewAnalytics') ? 600 : 500,
+                    fontSize: '15px',
+                    px: 2.5,
+                    py: 1,
+                    borderRadius: '8px',
+                    backgroundColor: isActive('/barber/viewAnalytics') ? 'rgba(255, 195, 0, 0.15)' : 'transparent',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 1,
-                    '&::after': isActive('/barber/viewAnalytics') ? {
-                      content: '""',
-                      position: 'absolute',
-                      bottom: -12,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: '60%',
-                      height: '3px',
-                      backgroundColor: '#FFC300',
-                      borderRadius: '2px 2px 0 0',
-                    } : {},
+                    gap: 1.25,
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    '&:hover': {
+                      backgroundColor: isActive('/barber/viewAnalytics') ? 'rgba(255, 195, 0, 0.22)' : 'rgba(15, 23, 42, 0.04)',
+                      color: '#0F172A',
+                    },
                   }}
                 >
-                  <BarChartIcon sx={{ fontSize: '20px' }} />
+                  <BarChartIcon sx={{ fontSize: '19px', color: isActive('/barber/viewAnalytics') ? '#0F172A' : 'inherit' }} />
                   Analytics
                 </Button>
               </RoleGuard>
@@ -499,15 +487,24 @@ const Navbar = () => {
               variant="tertiary"
               size="sm"
               onClick={handleLogout}
-              sx={{ 
-                fontWeight: 500, 
-                fontSize: '16px',
+              sx={{
+                fontWeight: 500,
+                fontSize: '15px',
+                px: 2,
+                py: 1,
+                borderRadius: '8px',
+                color: '#64748B',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 1,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                  color: '#EF4444',
+                },
               }}
             >
-              <LogoutIcon sx={{ fontSize: '20px' }} />
+              <LogoutIcon sx={{ fontSize: '19px' }} />
               Log Out
             </Button>
           ) : (
@@ -516,30 +513,48 @@ const Navbar = () => {
                 variant="tertiary"
                 size="sm"
                 onClick={() => navigate('/register')}
-                sx={{ 
-                  fontWeight: 500, 
-                  fontSize: '16px',
+                sx={{
+                  fontWeight: 500,
+                  fontSize: '15px',
+                  px: 2.5,
+                  py: 1,
+                  borderRadius: '8px',
+                  color: '#0F172A',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 1,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.05)' },
                 }}
               >
-                <AppRegistrationIcon sx={{ fontSize: '20px' }} />
+                <AppRegistrationIcon sx={{ fontSize: '19px' }} />
                 Register
               </Button>
+
               <Button
                 variant="primary"
                 size="sm"
                 onClick={() => navigate('/barber/login')}
-                sx={{ 
-                  fontWeight: 500, 
-                  fontSize: '16px',
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  px: 2.5,
+                  py: 1,
+                  borderRadius: '8px',
+                  backgroundColor: '#0F172A',
+                  color: '#FFFFFF',
+                  boxShadow: '0 2px 4px rgba(15, 23, 42, 0.1)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 1,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: '#1E293B',
+                    boxShadow: '0 4px 6px rgba(15, 23, 42, 0.15)',
+                  },
                 }}
               >
-                <LoginIcon sx={{ fontSize: '20px' }} />
+                <LoginIcon sx={{ fontSize: '19px' }} />
                 Log In
               </Button>
             </>
