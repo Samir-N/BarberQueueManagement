@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  useMediaQuery, 
-  useTheme, 
-  IconButton, 
-  Drawer, 
-  List, 
-  ListItem, 
-  ListItemButton, 
-  ListItemText, 
-  ListItemIcon, 
-  Divider 
-} from "@mui/material";
-import { useSelector, useDispatch } from "react-redux";
-import { clearUser } from "../redux/features/authSlice";
-import { useNavigate, useLocation } from "react-router-dom";
+import {
+  Box,
+  Typography,
+  useMediaQuery,
+  useTheme,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  ListItemIcon,
+  Divider,
+} from '@mui/material';
+import { useSelector, useDispatch } from 'react-redux';
+import { clearUser } from '../redux/features/authSlice';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import Button from "./Button";
+import Button from './Button';
 import { RoleGuard } from './RoleGuard';
 
 import HomeIcon from '@mui/icons-material/Home';
@@ -29,6 +29,8 @@ import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 
+const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
 const harvardKeyframes = {
   '@keyframes harvardDrawerFade': {
     '0%': { opacity: 0 },
@@ -37,6 +39,95 @@ const harvardKeyframes = {
   '@keyframes harvardTextSlide': {
     '0%': { opacity: 0, transform: 'translateY(-24px)' },
     '100%': { opacity: 1, transform: 'translateY(0)' },
+  },
+};
+
+/* Desktop nav links: soft lift, icon grow, small gold underline */
+const navLinkSx = (active) => ({
+  position: 'relative',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 1.25,
+  border: 'none',
+  boxShadow: 'none',
+  backdropFilter: 'none',
+  WebkitBackdropFilter: 'none',
+  px: 2.5,
+  py: 1,
+  fontSize: '15px',
+  borderRadius: '8px',
+  fontWeight: active ? 600 : 500,
+  color: active ? '#0F172A' : '#64748B',
+  backgroundColor: active ? 'rgba(255, 195, 0, 0.18)' : 'transparent',
+  transition: `all 0.25s ${EASE}`,
+  '& svg': {
+    fontSize: '19px',
+    color: active ? '#0F172A' : 'inherit',
+    transition: `transform 0.25s ${EASE}`,
+  },
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    left: '50%',
+    bottom: '4px',
+    height: '2px',
+    width: active ? '18px' : '0px',
+    borderRadius: '2px',
+    backgroundColor: '#FFC300',
+    transform: 'translateX(-50%)',
+    transition: `width 0.25s ${EASE}`,
+  },
+  '&:hover': {
+    border: 'none',
+    boxShadow: 'none',
+    color: '#0F172A',
+    transform: 'translateY(-1px)',
+    backgroundColor: active ? 'rgba(255, 195, 0, 0.26)' : 'rgba(15, 23, 42, 0.05)',
+    '&::after': { width: '18px' },
+    '& svg': { transform: 'scale(1.1)' },
+  },
+  '&:active': {
+    transform: 'translateY(0) scale(0.97)',
+  },
+});
+
+/* Mobile drawer items: slide on hover, navy bar when selected */
+const drawerItemSx = {
+  position: 'relative',
+  overflow: 'hidden',
+  py: 1.8,
+  px: 2,
+  borderRadius: 1.5,
+  transition: `all 0.25s ${EASE}`,
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    left: 0,
+    top: '22%',
+    bottom: '22%',
+    width: '3px',
+    borderRadius: '0 3px 3px 0',
+    backgroundColor: '#0F172A',
+    transform: 'scaleY(0)',
+    transition: `transform 0.25s ${EASE}`,
+  },
+  '&:hover': {
+    backgroundColor: 'rgba(15, 23, 42, 0.08)',
+    transform: 'translateX(4px)',
+  },
+  '&:active': {
+    transform: 'translateX(2px) scale(0.98)',
+  },
+  '&.Mui-selected': {
+    backgroundColor: 'rgba(15, 23, 42, 0.15)',
+    '&::before': { transform: 'scaleY(1)' },
+    '& .MuiListItemIcon-root, & .MuiTypography-root': {
+      color: '#0F172A',
+      fontWeight: 600,
+    },
+  },
+  '&.Mui-selected:hover': {
+    backgroundColor: 'rgba(15, 23, 42, 0.2)',
   },
 };
 
@@ -58,7 +149,7 @@ const Navbar = () => {
     try {
       await axios.post('/api/v1/user/logout', {}, { withCredentials: true });
     } catch (error) {
-      console.error("Logout failed on server", error);
+      console.error('Logout failed on server', error);
     } finally {
       dispatch(clearUser());
       setMobileOpen(false);
@@ -75,17 +166,17 @@ const Navbar = () => {
   const dashboardPath = user?.role === 'barber' ? '/barber/dashboard' : '/user/dashboard';
 
   const drawerContent = (
-    <Box 
-      sx={{ 
-        width: '100%', 
+    <Box
+      sx={{
+        width: '100%',
         height: '100%',
-        display: 'flex', 
-        flexDirection: 'column', 
+        display: 'flex',
+        flexDirection: 'column',
         backgroundColor: '#FFC300',
         color: '#0F172A',
         p: 3,
         boxSizing: 'border-box',
-        animation: 'harvardDrawerFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        animation: `harvardDrawerFade 0.3s ${EASE} forwards`,
         ...harvardKeyframes,
       }}
     >
@@ -96,21 +187,21 @@ const Navbar = () => {
           justifyContent: 'space-between',
           pb: 2,
           borderBottom: '1px solid rgba(15, 23, 42, 0.12)',
-          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both',
+          animation: `harvardTextSlide 0.5s ${EASE} 0.05s both`,
         }}
       >
-        <Typography 
+        <Typography
           onClick={() => handleNavigation('/')}
           sx={{ fontSize: '20px', fontWeight: 600, color: '#0F172A', cursor: 'pointer' }}
         >
           Barber App
         </Typography>
-        <IconButton 
-          onClick={handleDrawerToggle} 
-          sx={{ 
+        <IconButton
+          onClick={handleDrawerToggle}
+          sx={{
             color: '#0F172A',
-            transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-            '&:hover': { transform: 'rotate(90deg) scale(1.1)' }
+            transition: `transform 0.25s ${EASE}`,
+            '&:hover': { transform: 'rotate(90deg) scale(1.1)' },
           }}
         >
           <CloseIcon sx={{ fontSize: '28px' }} />
@@ -120,24 +211,14 @@ const Navbar = () => {
       <List sx={{ pt: 2, flexGrow: 1 }}>
         {user && (
           <>
-            <ListItem 
-              disablePadding 
-              sx={{ animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both' }}
+            <ListItem
+              disablePadding
+              sx={{ animation: `harvardTextSlide 0.5s ${EASE} 0.12s both` }}
             >
               <ListItemButton
                 onClick={() => handleNavigation('/')}
                 selected={isActive('/')}
-                sx={{
-                  py: 1.8,
-                  px: 2,
-                  borderRadius: 1.5,
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.08)' },
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(15, 23, 42, 0.15)',
-                    '& .MuiListItemIcon-root, & .MuiTypography-root': { color: '#0F172A', fontWeight: 600 },
-                  },
-                }}
+                sx={drawerItemSx}
               >
                 <ListItemIcon sx={{ minWidth: 44, color: '#0F172A' }}>
                   <HomeIcon />
@@ -146,24 +227,14 @@ const Navbar = () => {
               </ListItemButton>
             </ListItem>
 
-            <ListItem 
-              disablePadding 
-              sx={{ mt: 1, animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both' }}
+            <ListItem
+              disablePadding
+              sx={{ mt: 1, animation: `harvardTextSlide 0.5s ${EASE} 0.18s both` }}
             >
               <ListItemButton
                 onClick={() => handleNavigation(dashboardPath)}
                 selected={isActive(dashboardPath)}
-                sx={{
-                  py: 1.8,
-                  px: 2,
-                  borderRadius: 1.5,
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.08)' },
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(15, 23, 42, 0.15)',
-                    '& .MuiListItemIcon-root, & .MuiTypography-root': { color: '#0F172A', fontWeight: 600 },
-                  },
-                }}
+                sx={drawerItemSx}
               >
                 <ListItemIcon sx={{ minWidth: 44, color: '#0F172A' }}>
                   <DashboardIcon />
@@ -173,24 +244,14 @@ const Navbar = () => {
             </ListItem>
 
             <RoleGuard allowedRoles={['barber']}>
-              <ListItem 
-                disablePadding 
-                sx={{ mt: 1, animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.24s both' }}
+              <ListItem
+                disablePadding
+                sx={{ mt: 1, animation: `harvardTextSlide 0.5s ${EASE} 0.24s both` }}
               >
                 <ListItemButton
                   onClick={() => handleNavigation('/barber/viewAnalytics')}
                   selected={isActive('/barber/viewAnalytics')}
-                  sx={{
-                    py: 1.8,
-                    px: 2,
-                    borderRadius: 1.5,
-                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                    '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.08)' },
-                    '&.Mui-selected': {
-                      backgroundColor: 'rgba(15, 23, 42, 0.15)',
-                      '& .MuiListItemIcon-root, & .MuiTypography-root': { color: '#0F172A', fontWeight: 600 },
-                    },
-                  }}
+                  sx={drawerItemSx}
                 >
                   <ListItemIcon sx={{ minWidth: 44, color: '#0F172A' }}>
                     <BarChartIcon />
@@ -203,18 +264,18 @@ const Navbar = () => {
         )}
       </List>
 
-      <Divider 
-        sx={{ 
-          borderColor: 'rgba(15, 23, 42, 0.12)', 
-          my: 2, 
-          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both' 
-        }} 
+      <Divider
+        sx={{
+          borderColor: 'rgba(15, 23, 42, 0.12)',
+          my: 2,
+          animation: `harvardTextSlide 0.5s ${EASE} 0.3s both`,
+        }}
       />
 
-      <Box 
-        sx={{ 
-          pb: 2, 
-          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.36s both' 
+      <Box
+        sx={{
+          pb: 2,
+          animation: `harvardTextSlide 0.5s ${EASE} 0.36s both`,
         }}
       >
         {user ? (
@@ -233,8 +294,8 @@ const Navbar = () => {
               variant="tertiary"
               size="sm"
               onClick={() => handleNavigation('/barber/register')}
-              sx={{ 
-                width: '100%', 
+              sx={{
+                width: '100%',
                 justifyContent: 'center',
                 backgroundColor: 'rgba(255, 255, 255, 0.9)',
                 color: '#0F172A',
@@ -242,7 +303,7 @@ const Navbar = () => {
                 fontSize: '16px',
                 py: 1.2,
                 boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                '&:hover': { backgroundColor: '#FFFFFF' }
+                '&:hover': { backgroundColor: '#FFFFFF', borderColor: '#0F172A' },
               }}
             >
               <AppRegistrationIcon sx={{ fontSize: '20px', mr: 1 }} />
@@ -252,15 +313,15 @@ const Navbar = () => {
               variant="primary"
               size="sm"
               onClick={() => handleNavigation('/barber/login')}
-              sx={{ 
-                width: '100%', 
+              sx={{
+                width: '100%',
                 justifyContent: 'center',
                 backgroundColor: '#0F172A',
                 color: '#FFFFFF',
                 fontSize: '16px',
                 py: 1.2,
                 boxShadow: '0 4px 6px rgba(15, 23, 42, 0.2)',
-                '&:hover': { backgroundColor: '#1E293B' }
+                '&:hover': { backgroundColor: '#1E293B' },
               }}
             >
               <LoginIcon sx={{ fontSize: '20px', mr: 1 }} />
@@ -291,7 +352,16 @@ const Navbar = () => {
             zIndex: 1100,
           }}
         >
-          <Box sx={{ maxWidth: '1280px', width: '100%', mx: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box
+            sx={{
+              maxWidth: '1280px',
+              width: '100%',
+              mx: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <Typography
               onClick={() => navigate('/')}
               sx={{ fontSize: '18px', fontWeight: 600, color: '#0F172A', cursor: 'pointer' }}
@@ -299,13 +369,14 @@ const Navbar = () => {
               Barber App
             </Typography>
 
-            <IconButton 
-              onClick={handleDrawerToggle} 
-              sx={{ 
-                color: '#0F172A', 
+            <IconButton
+              onClick={handleDrawerToggle}
+              sx={{
+                color: '#0F172A',
                 p: 1,
-                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                '&:hover': { transform: 'scale(1.1)' }
+                transition: `all 0.2s ${EASE}`,
+                '&:hover': { transform: 'scale(1.1)', backgroundColor: 'rgba(255, 195, 0, 0.18)' },
+                '&:active': { transform: 'scale(0.94)' },
               }}
             >
               <MenuIcon sx={{ fontSize: '28px' }} />
@@ -318,17 +389,17 @@ const Navbar = () => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           transitionDuration={{ enter: 400, exit: 300 }}
-          ModalProps={{ 
+          ModalProps={{
             keepMounted: true,
             slotProps: {
               backdrop: {
                 sx: {
                   backgroundColor: 'rgba(15, 23, 42, 0.5)',
                   backdropFilter: 'blur(8px)',
-                  transition: 'opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                }
-              }
-            }
+                  transition: `opacity 0.3s ${EASE}`,
+                },
+              },
+            },
           }}
           PaperProps={{
             sx: {
@@ -398,26 +469,9 @@ const Navbar = () => {
                 variant="tertiary"
                 size="sm"
                 onClick={() => navigate('/')}
-                sx={{
-                  border: 'none',
-                  color: isActive('/') ? '#0F172A' : '#64748B',
-                  fontWeight: isActive('/') ? 600 : 500,
-                  fontSize: '15px',
-                  px: 2.5,
-                  py: 1,
-                  borderRadius: '8px',
-                  backgroundColor: isActive('/') ? 'rgba(255, 195, 0, 0.15)' : 'transparent',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 1.25,
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  '&:hover': {
-                    backgroundColor: isActive('/') ? 'rgba(255, 195, 0, 0.22)' : 'rgba(15, 23, 42, 0.04)',
-                    color: '#0F172A',
-                  },
-                }}
+                sx={navLinkSx(isActive('/'))}
               >
-                <HomeIcon sx={{ fontSize: '19px', color: isActive('/') ? '#0F172A' : 'inherit' }} />
+                <HomeIcon />
                 Home
               </Button>
 
@@ -425,26 +479,9 @@ const Navbar = () => {
                 variant="tertiary"
                 size="sm"
                 onClick={() => navigate(dashboardPath)}
-                sx={{
-                  border: 'none',
-                  color: isActive(dashboardPath) ? '#0F172A' : '#64748B',
-                  fontWeight: isActive(dashboardPath) ? 600 : 500,
-                  fontSize: '15px',
-                  px: 2.5,
-                  py: 1,
-                  borderRadius: '8px',
-                  backgroundColor: isActive(dashboardPath) ? 'rgba(255, 195, 0, 0.15)' : 'transparent',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 1.25,
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  '&:hover': {
-                    backgroundColor: isActive(dashboardPath) ? 'rgba(255, 195, 0, 0.22)' : 'rgba(15, 23, 42, 0.04)',
-                    color: '#0F172A',
-                  },
-                }}
+                sx={navLinkSx(isActive(dashboardPath))}
               >
-                <DashboardIcon sx={{ fontSize: '19px', color: isActive(dashboardPath) ? '#0F172A' : 'inherit' }} />
+                <DashboardIcon />
                 Dashboard
               </Button>
 
@@ -453,26 +490,9 @@ const Navbar = () => {
                   variant="tertiary"
                   size="sm"
                   onClick={() => navigate('/barber/viewAnalytics')}
-                  sx={{
-                    border: 'none',
-                    color: isActive('/barber/viewAnalytics') ? '#0F172A' : '#64748B',
-                    fontWeight: isActive('/barber/viewAnalytics') ? 600 : 500,
-                    fontSize: '15px',
-                    px: 2.5,
-                    py: 1,
-                    borderRadius: '8px',
-                    backgroundColor: isActive('/barber/viewAnalytics') ? 'rgba(255, 195, 0, 0.15)' : 'transparent',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 1.25,
-                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                    '&:hover': {
-                      backgroundColor: isActive('/barber/viewAnalytics') ? 'rgba(255, 195, 0, 0.22)' : 'rgba(15, 23, 42, 0.04)',
-                      color: '#0F172A',
-                    },
-                  }}
+                  sx={navLinkSx(isActive('/barber/viewAnalytics'))}
                 >
-                  <BarChartIcon sx={{ fontSize: '19px', color: isActive('/barber/viewAnalytics') ? '#0F172A' : 'inherit' }} />
+                  <BarChartIcon />
                   Analytics
                 </Button>
               </RoleGuard>
@@ -500,7 +520,9 @@ const Navbar = () => {
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                  borderColor: 'rgba(239, 68, 68, 0.45)',
                   color: '#EF4444',
+                  transform: 'translateY(-1px)',
                 },
               }}
             >
@@ -523,8 +545,6 @@ const Navbar = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 1,
-                  transition: 'all 0.2s ease',
-                  '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.05)' },
                 }}
               >
                 <AppRegistrationIcon sx={{ fontSize: '19px' }} />

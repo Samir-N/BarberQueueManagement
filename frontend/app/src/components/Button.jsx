@@ -36,6 +36,7 @@ const Button = ({
         transform: 'translateY(0px)',
       },
     },
+
     secondary: {
       backgroundColor: '#1e2838',
       color: '#FFFFFF',
@@ -47,26 +48,31 @@ const Button = ({
         transform: 'translateY(0px)',
       },
     },
+
+    /* Glass: blur + transparent + visible border, gold on hover */
     tertiary: {
-      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      backgroundColor: 'rgba(15, 23, 42, 0.04)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
       color: '#0F172A',
-      border: '1px solid rgba(255, 255, 255, 0.25)',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+      border: '1px solid rgba(15, 23, 42, 0.22)',
+      boxShadow:
+        '0 2px 6px -1px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
       '&:hover': {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderColor: 'rgba(255, 255, 255, 0.4)',
+        backgroundColor: 'rgba(255, 195, 0, 0.14)',
+        borderColor: '#FFC300',
         color: '#0F172A',
         transform: 'translateY(-1.5px)',
-        boxShadow: '0 6px 15px -3px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+        boxShadow:
+          '0 6px 14px -3px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
       },
       '&:active': {
         transform: 'translateY(0px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.12)',
+        backgroundColor: 'rgba(255, 195, 0, 0.22)',
         boxShadow: 'none',
       },
     },
+
     /* Solid Modern Emerald (Confirm) */
     success: {
       backgroundColor: '#10B981',
@@ -79,6 +85,7 @@ const Button = ({
         transform: 'translateY(0px)',
       },
     },
+
     /* Solid Modern Rose (Cancel) */
     danger: {
       backgroundColor: '#F43F5E',
@@ -114,12 +121,10 @@ const Button = ({
         gap: '8px',
         transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         cursor: disabled ? 'not-allowed' : 'pointer',
-
         '&:focus-visible': {
           outline: '2px solid #FFC300',
           outlineOffset: '2px',
         },
-
         '&.Mui-disabled': {
           opacity: 0.6,
           backgroundColor: '#E2E8F0',
@@ -128,7 +133,6 @@ const Button = ({
           transform: 'none',
           backdropFilter: 'none',
         },
-
         ...(variantStyles[variant] || variantStyles.primary),
         ...sx,
       }}
