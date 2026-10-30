@@ -21,6 +21,7 @@ import Button from "./Button";
 
 import HomeIcon from '@mui/icons-material/Home';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
@@ -169,6 +170,32 @@ const Navbar = () => {
                 <ListItemText primary="Dashboard" primaryTypographyProps={{ fontSize: '16px' }} />
               </ListItemButton>
             </ListItem>
+
+            <ListItem 
+              disablePadding 
+              sx={{ mt: 1, animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.24s both' }}
+            >
+              <ListItemButton
+                onClick={() => handleNavigation('/barber/viewAnalytics')}
+                selected={isActive('/barber/viewAnalytics')}
+                sx={{
+                  py: 1.8,
+                  px: 2,
+                  borderRadius: 1.5,
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.08)' },
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(15, 23, 42, 0.15)',
+                    '& .MuiListItemIcon-root, & .MuiTypography-root': { color: '#0F172A', fontWeight: 600 },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 44, color: '#0F172A' }}>
+                  <BarChartIcon />
+                </ListItemIcon>
+                <ListItemText primary="Analytics" primaryTypographyProps={{ fontSize: '16px' }} />
+              </ListItemButton>
+            </ListItem>
           </>
         )}
       </List>
@@ -177,14 +204,14 @@ const Navbar = () => {
         sx={{ 
           borderColor: 'rgba(15, 23, 42, 0.12)', 
           my: 2, 
-          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.24s both' 
+          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both' 
         }} 
       />
 
       <Box 
         sx={{ 
           pb: 2, 
-          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both' 
+          animation: 'harvardTextSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.36s both' 
         }}
       >
         {user ? (
@@ -423,6 +450,37 @@ const Navbar = () => {
                 <DashboardIcon sx={{ fontSize: '20px' }} />
                 Dashboard
               </Button>
+
+              <Button
+                variant="tertiary"
+                size="sm"
+                onClick={() => navigate('/barber/viewAnalytics')}
+                sx={{
+                  border: 'none',
+                  color: isActive('/barber/viewAnalytics') ? '#0F172A' : '#64748B',
+                  fontWeight: 500,
+                  fontSize: '16px',
+                  position: 'relative',
+                  px: 2,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  '&::after': isActive('/barber/viewAnalytics') ? {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: -12,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '60%',
+                    height: '3px',
+                    backgroundColor: '#FFC300',
+                    borderRadius: '2px 2px 0 0',
+                  } : {},
+                }}
+              >
+                <BarChartIcon sx={{ fontSize: '20px' }} />
+                Analytics
+              </Button>
             </>
           )}
         </Box>
@@ -485,4 +543,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default Navbar;    

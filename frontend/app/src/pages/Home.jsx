@@ -143,7 +143,7 @@ const Home = () => {
            <RoleGuard allowedRoles={['barber']}>
   <Box sx={{ width: '100%', display: 'flex', flexDirection: 'row', gap: 2 }}>
     <Button
-      variant="primary"
+      variant="secondary"
       onClick={() => navigate('/barber/dashboard')}
       className="flex-1 h-12 justify-center gap-2 text-sm font-semibold shadow-xs"
     >
@@ -151,8 +151,8 @@ const Home = () => {
       <span>Barber Dashboard</span>
     </Button>
     <Button
-      variant="secondary"
-      onClick={() => navigate('/barber/dashboard')}
+      variant="tertiary"
+      onClick={() => navigate('/barber/viewAnalytics')}
       className="flex-1 h-12 justify-center gap-2 text-sm font-semibold shadow-xs"
     >
       <DashboardIcon className="!text-[18px]" />

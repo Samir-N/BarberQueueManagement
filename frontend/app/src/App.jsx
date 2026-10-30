@@ -12,6 +12,7 @@ import UserDashboard from "./pages/UserDashboard.jsx";
 import PageNotFound from "./pages/PageNotFound.jsx";
 import BarberRegister from "./pages/BarberRegister.jsx";
 import Contact from "./pages/Contact.jsx";
+import BarberAnalytics from './pages/BarberAnalytics.jsx'
 
 // Components
 import Spinner from "./components/Spinner.jsx";
@@ -119,6 +120,7 @@ function App() {
             <Route element={<PrivateRoutes />}>
               <Route path="/" element={<Home />} />
               <Route path="/barber/dashboard" element={<BarberDashboard />} />
+              <Route path="/barber/viewAnalytics" element={<BarberAnalytics />} />
               <Route path="/user/dashboard" element={<UserDashboard />} />
               <Route path="/contact" element={<Contact />} />
 
