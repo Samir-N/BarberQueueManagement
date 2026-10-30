@@ -150,7 +150,7 @@ const Navbar = () => {
     } finally {
       dispatch(clearUser());
       setMobileOpen(false);
-      navigate('/login');
+      navigate('/barber/login');
     }
   };
 
@@ -309,7 +309,7 @@ const Navbar = () => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => handleNavigation('/login')}
+              onClick={() => handleNavigation('/barber/login')}
               sx={{
                 width: '100%',
                 justifyContent: 'center',
@@ -318,8 +318,7 @@ const Navbar = () => {
                 fontSize: '16px',
                 py: 1.2,
                 boxShadow: '0 4px 6px rgba(15, 23, 42, 0.2)',
-                '&:hover': { backgroundColor: '#1E293B', transform: 'none' },
-                '&:focus-visible': { outline: 'none' },
+                '&:hover': { backgroundColor: '#1E293B' },
               }}
             >
               <LoginIcon sx={{ fontSize: '20px', mr: 1 }} />
@@ -517,6 +516,9 @@ const Navbar = () => {
                 gap: 1,
                 transition: 'all 0.2s ease',
                 '&:hover': {
+                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                  borderColor: 'rgba(239, 68, 68, 0.45)',
+                  color: '#EF4444',
                   transform: 'translateY(-1px)',
                 },
               }}
@@ -549,7 +551,7 @@ const Navbar = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/barber/login')}
                 sx={{
                   fontWeight: 600,
                   fontSize: '15px',
@@ -566,10 +568,6 @@ const Navbar = () => {
                   '&:hover': {
                     backgroundColor: '#1E293B',
                     boxShadow: '0 4px 6px rgba(15, 23, 42, 0.15)',
-                    transform: 'none',
-                  },
-                  '&:focus-visible': {
-                    outline: 'none',
                   },
                 }}
               >
