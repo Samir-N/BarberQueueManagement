@@ -35,7 +35,7 @@ const ALERT_STYLES = {
 const IOS_EASE_OUT = "cubic-bezier(0.32, 0.72, 0, 1)";
 const TOP_OFFSET = { xs: 12, sm: 16 };
 const SWIPE_DISMISS_PX = 30;
-const DEFAULT_DURATION = 3500;
+const DEFAULT_DURATION = 2000;
 
 const ErrorTab = () => {
   const { message, type, open, duration, title } = useSelector(
