@@ -42,7 +42,7 @@ const harvardKeyframes = {
   },
 };
 
-/* Desktop nav links: simple neutral hover, thin navy underline when active */
+/* Desktop nav links: simple neutral hover and active state */
 const navLinkSx = (active) => ({
   position: 'relative',
   display: 'inline-flex',
@@ -56,24 +56,13 @@ const navLinkSx = (active) => ({
   py: 1,
   fontSize: '15px',
   borderRadius: 0,
-  fontWeight: active ? 600 : 500,
+  fontWeight: 400,
   color: active ? '#0F172A' : '#64748B',
   backgroundColor: active ? 'rgba(15, 23, 42, 0.06)' : 'transparent',
   transition: `background-color 0.2s ease, color 0.2s ease`,
   '& svg': {
     fontSize: '19px',
     color: 'inherit',
-  },
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '2px',
-    backgroundColor: '#0F172A',
-    transform: active ? 'scaleX(1)' : 'scaleX(0)',
-    transition: `transform 0.25s ${EASE}`,
   },
   '&:hover': {
     border: 'none',
@@ -120,7 +109,7 @@ const drawerItemSx = {
     '&::before': { transform: 'scaleY(1)' },
     '& .MuiListItemIcon-root, & .MuiTypography-root': {
       color: '#0F172A',
-      fontWeight: 600,
+      fontWeight: 500,
     },
   },
   '&.Mui-selected:hover': {
@@ -150,7 +139,7 @@ const Navbar = () => {
     } finally {
       dispatch(clearUser());
       setMobileOpen(false);
-      navigate('/barber/login');
+      navigate('/login');
     }
   };
 
@@ -309,7 +298,7 @@ const Navbar = () => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => handleNavigation('/barber/login')}
+              onClick={() => handleNavigation('/login')}
               sx={{
                 width: '100%',
                 justifyContent: 'center',
@@ -318,7 +307,8 @@ const Navbar = () => {
                 fontSize: '16px',
                 py: 1.2,
                 boxShadow: '0 4px 6px rgba(15, 23, 42, 0.2)',
-                '&:hover': { backgroundColor: '#1E293B' },
+                '&:hover': { backgroundColor: '#1E293B', transform: 'none' },
+                '&:focus-visible': { outline: 'none' },
               }}
             >
               <LoginIcon sx={{ fontSize: '20px', mr: 1 }} />
@@ -342,7 +332,7 @@ const Navbar = () => {
             right: 0,
             height: '60px',
             backgroundColor: '#FFFFFF',
-            borderBottom: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.05)',
             display: 'flex',
             alignItems: 'center',
             px: 2,
@@ -424,8 +414,7 @@ const Navbar = () => {
         right: 0,
         height: '64px',
         backgroundColor: '#FFFFFF',
-        borderBottom: '1px solid #E2E8F0',
-        boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.03)',
+        boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.05)',
         zIndex: 1100,
         display: 'flex',
         justifyContent: 'center',
@@ -446,7 +435,7 @@ const Navbar = () => {
             onClick={() => navigate('/')}
             sx={{
               fontSize: '20px',
-              fontWeight: 700,
+              fontWeight: 600,
               color: '#0F172A',
               letterSpacing: '-0.025em',
               cursor: 'pointer',
@@ -516,9 +505,6 @@ const Navbar = () => {
                 gap: 1,
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                  borderColor: 'rgba(239, 68, 68, 0.45)',
-                  color: '#EF4444',
                   transform: 'translateY(-1px)',
                 },
               }}
@@ -551,7 +537,7 @@ const Navbar = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => navigate('/barber/login')}
+                onClick={() => navigate('/login')}
                 sx={{
                   fontWeight: 600,
                   fontSize: '15px',
@@ -568,6 +554,10 @@ const Navbar = () => {
                   '&:hover': {
                     backgroundColor: '#1E293B',
                     boxShadow: '0 4px 6px rgba(15, 23, 42, 0.15)',
+                    transform: 'none',
+                  },
+                  '&:focus-visible': {
+                    outline: 'none',
                   },
                 }}
               >
