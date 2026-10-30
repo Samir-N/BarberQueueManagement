@@ -99,15 +99,11 @@ const bookingController = async (req, res) => {
       });
     }
 
-    const expiresAt = new Date(appointmentDate);
-    expiresAt.setHours(23, 59, 59, 999);
-
     const booking = new bookingModel({
       userId,
       barberId: cleanBarberId,
       service: cleanServiceId,
       bookingTime: appointmentDate,
-      expiresAt,
     });
     await booking.save();
 
@@ -163,10 +159,6 @@ const bookingController = async (req, res) => {
  * @desc    Fetch all upcoming bookings
  * @route   GET /api/v1/user/getBookings
  */
-/**
- * @desc    Fetch all upcoming bookings
- * @route   GET /api/v1/user/getBookings
- */
 const bookingsFetchController = async (req, res) => {
   try {
     const startOfToday = new Date();
@@ -176,7 +168,7 @@ const bookingsFetchController = async (req, res) => {
       .find({ bookingTime: { $gte: startOfToday } })
       .populate("service")
       .populate("userId")
-      .populate("barberId"); // <-- Added for consistent population
+      .populate("barberId");
 
     const statusPriority = { pending: 1, confirmed: 2, completed: 3, cancelled: 4 };
 
@@ -202,6 +194,7 @@ const bookingsFetchController = async (req, res) => {
     });
   }
 };
+
 /**
  * @desc    Fetch active booking(s) for logged-in user
  * @route   POST /api/v1/user/personalBookings
@@ -228,7 +221,7 @@ const personalBookingFetchController = async (req, res) => {
       })
       .populate("service")
       .populate("userId")
-      .populate("barberId"); // <-- Add this line here!
+      .populate("barberId");
 
     return res.status(200).json({
       success: true,
@@ -335,13 +328,10 @@ const editBookingController = async (req, res) => {
       });
     }
 
-    const expiresAt = new Date(appointmentDate);
-    expiresAt.setHours(23, 59, 59, 999);
-
     const updatedBooking = await bookingModel
       .findByIdAndUpdate(
         bookingId,
-        { service, bookingTime: appointmentDate, expiresAt },
+        { service, bookingTime: appointmentDate },
         { new: true }
       )
       .populate("service")

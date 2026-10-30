@@ -76,7 +76,6 @@ const PersonalBookings = () => {
   useEffect(() => {
     const fetchPersonalBooking = async () => {
       try {
-        dispatch(showLoading());
         const res = await axios.post("/api/v1/user/personalBookings");
 
         if (res.data?.success && res.data?.data) {
@@ -88,7 +87,6 @@ const PersonalBookings = () => {
         console.error("Error fetching personal booking:", err);
         dispatch(clearPersonalBooking());
       } finally {
-        dispatch(hideLoading());
       }
     };
 
