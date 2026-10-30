@@ -45,13 +45,13 @@ const Home = () => {
         dispatch(setUser(response.data.data));
       } else {
         localStorage.removeItem('token');
-        navigate('/barber/login');
+        navigate('/login');
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
-        navigate('/barber/login');
+        navigate('/login');
       }
     } finally {
       dispatch(hideLoading());

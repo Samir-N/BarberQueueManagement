@@ -117,25 +117,32 @@ function App() {
           }}
         >
           <Routes>
-            <Route element={<PrivateRoutes allowedRole={"user"} />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/user/dashboard" element={<UserDashboard />} />
-              <Route path="/contact" element={<Contact />} />
-            </Route>
+  {/* Public / Auth Routes */}
+  <Route element={<PublicRoutes />}>
+    <Route path="/login" element={<BarberLogin />} />
+    <Route path="/register" element={<BarberRegister />} />
+  </Route>
 
-             <Route element={<PrivateRoutes allowedRole={"barber"}/>}>
-             <Route path="/" element={<Home />} />
-              <Route path="/barber/dashboard" element={<BarberDashboard />} />
-              <Route path="/barber/viewAnalytics" element={<BarberAnalytics />} />
-             </Route>
+  {/* Shared Homepage for all authenticated users */}
+  <Route element={<PrivateRoutes />}>
+    <Route path="/" element={<Home />} />
+    <Route path="/contact" element={<Contact />} />
+  </Route>
 
-            <Route element={<PublicRoutes />}>
-              <Route path="/login" element={<BarberLogin />} />
-              <Route path="/register" element={<BarberRegister />} />
-            </Route>
+  {/* Regular User Only Routes */}
+  <Route element={<PrivateRoutes allowedRole={"user"} />}>
+    <Route path="/user/dashboard" element={<UserDashboard />} />
+  </Route>
 
-            <Route path="*" element={<PageNotFound />} />
-          </Routes>
+  {/* Barber Only Routes */}
+  <Route element={<PrivateRoutes allowedRole={"barber"} />}>
+    <Route path="/barber/dashboard" element={<BarberDashboard />} />
+    <Route path="/barber/viewAnalytics" element={<BarberAnalytics />} />
+  </Route>
+
+  <Route path="*" element={<PageNotFound />} />
+</Routes>
+
         </Box>
       </Router>
     </Box>
