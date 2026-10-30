@@ -117,19 +117,21 @@ function App() {
           }}
         >
           <Routes>
-            <Route element={<PrivateRoutes />}>
+            <Route element={<PrivateRoutes allowedRole={"user"} />}>
               <Route path="/" element={<Home />} />
-              <Route path="/barber/dashboard" element={<BarberDashboard />} />
-              <Route path="/barber/viewAnalytics" element={<BarberAnalytics />} />
               <Route path="/user/dashboard" element={<UserDashboard />} />
               <Route path="/contact" element={<Contact />} />
-
             </Route>
+
+             <Route element={<PrivateRoutes allowedRole={'barber'}/>}>
+             <Route path="/" element={<Home />} />
+              <Route path="/barber/dashboard" element={<BarberDashboard />} />
+              <Route path="/barber/viewAnalytics" element={<BarberAnalytics />} />
+             </Route>
 
             <Route element={<PublicRoutes />}>
               <Route path="/login" element={<BarberLogin />} />
-              <Route path="/barber/login" element={<BarberLogin />} />
-              <Route path="/barber/register" element={<BarberRegister />} />
+              <Route path="/register" element={<BarberRegister />} />
             </Route>
 
             <Route path="*" element={<PageNotFound />} />
