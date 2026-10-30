@@ -123,7 +123,7 @@ function App() {
               <Route path="/contact" element={<Contact />} />
             </Route>
 
-             <Route element={<PrivateRoutes allowedRole={'barber'}/>}>
+             <Route element={<PrivateRoutes allowedRole={"barber"}/>}>
              <Route path="/" element={<Home />} />
               <Route path="/barber/dashboard" element={<BarberDashboard />} />
               <Route path="/barber/viewAnalytics" element={<BarberAnalytics />} />
