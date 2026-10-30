@@ -172,7 +172,7 @@ const Navbar = () => {
               </ListItemButton>
             </ListItem>
 
-            {/* Barber-Only Analytics Link in Mobile Drawer */}
+            {/* RoleGuard Protected Analytics Link in Mobile Drawer */}
             <RoleGuard allowedRoles={['barber']}>
               <ListItem 
                 disablePadding 
@@ -455,7 +455,7 @@ const Navbar = () => {
                 Dashboard
               </Button>
 
-              {/* Barber-Only Analytics Link in Desktop Navbar */}
+              {/* RoleGuard Protected Analytics Link in Desktop Navbar */}
               <RoleGuard allowedRoles={['barber']}>
                 <Button
                   variant="tertiary"
@@ -515,7 +515,7 @@ const Navbar = () => {
               <Button
                 variant="tertiary"
                 size="sm"
-                onClick={() => navigate('/barber/register')}
+                onClick={() => navigate('/register')}
                 sx={{ 
                   fontWeight: 500, 
                   fontSize: '16px',

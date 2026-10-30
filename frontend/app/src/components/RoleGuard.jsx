@@ -7,7 +7,7 @@ export const RoleGuard = ({ allow, allowedRoles, children, fallback = null }) =>
   // Support both 'allowedRoles' and 'allow'
   const roles = allowedRoles || allow || [];
 
-  if (!user || !roles.includes(user?.role)) {
+  if (!user || !user.role || !roles.includes(user.role)) {
     return fallback;
   }
 
