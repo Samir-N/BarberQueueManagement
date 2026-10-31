@@ -18,7 +18,7 @@
   "bugs": {
     "url": "https://github.com/Samir-N/BarberQueue/issues"
   },
-  "homepage": "https://g  ithub.com/Samir-N/BarberQueue#readme",
+  "homepage": "https://github.com/Samir-N/BarberQueue#readme",
   "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.2",

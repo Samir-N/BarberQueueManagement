@@ -20,7 +20,7 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax',
   path: '/',
-  maxAge: 86400000, // 1 day
+  maxAge: 432000000, // 1 day
 };
 
 // Barber Register Controller

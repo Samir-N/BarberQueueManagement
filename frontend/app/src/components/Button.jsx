@@ -37,12 +37,12 @@ const Button = ({
   };
 
   const variantStyles = {
-    primary: {
-      backgroundColor: '#FFC300',
-      color: '#0F172A',
-      '&:hover': { backgroundColor: '#E6B000', borderColor: '#E6B000', ...lift },
-      '&:active': press,
-    },
+      primary: {
+        backgroundColor: '#FFC300',
+        color: '#0F172A',
+        '&:hover': { backgroundColor: '#E6B000', borderColor: '#E6B000', ...lift },
+        '&:active': press,
+      },
 
     secondary: {
       backgroundColor: '#1e2838',

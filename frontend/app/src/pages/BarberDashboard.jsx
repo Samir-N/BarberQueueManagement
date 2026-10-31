@@ -1,24 +1,31 @@
 import React, { useEffect } from 'react';
 import { Box, Card } from '@mui/material';
-import WaitingList from '../components/WaitingList';
+import { useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
+import WaitingList from '../components/WaitingList';
 
 const BarberDashboard = () => {
+  const authUser = useSelector((state) => state.auth?.user);
+
   useEffect(() => {
-    // Retrieve logged-in user / barber info from localStorage (or Redux)
-    const userStorage = localStorage.getItem('user');
-    const barberUser = userStorage ? JSON.parse(userStorage) : null;
-    const barberId = barberUser?._id || barberUser?.id;
+    // 1. Retrieve logged-in user / barber info from Redux or localStorage fallback
+    const userStorage = localStorage.getItem('user') || localStorage.getItem('userInfo');
+    const localUser = userStorage ? JSON.parse(userStorage) : null;
+    const barberId = authUser?._id || authUser?.id || localUser?._id || localUser?.id;
 
     if (!barberId) {
-      console.warn("No barber ID found in localStorage. Real-time status sync skipped.");
+      console.warn("No barber ID found in Redux or localStorage. Real-time status sync skipped.");
       return;
     }
 
-    // Connect to backend socket and pass barberId in auth handshake
-    const socket = io("http://localhost:8080", {
+    // 2. Pull dynamic socket URL from environment variable
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "https://barber-queue-api.onrender.com";
+
+    // 3. Connect to backend socket using env URL and auth handshake
+    const socket = io(SOCKET_URL, {
       auth: { barberId },
       withCredentials: true,
+      transports: ["websocket", "polling"],
     });
 
     socket.on("connect", () => {
@@ -29,11 +36,11 @@ const BarberDashboard = () => {
       console.error("Socket connection failed:", err.message);
     });
 
-    // Cleanup connection on unmount (logs the barber offline)
+    // Cleanup connection on unmount
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [authUser]);
 
   return (
     <Box

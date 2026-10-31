@@ -282,14 +282,4 @@ a:hover {
 }
 
 
-@media (hover: hover) and (pointer: fine) {
-  body,
-  a,
-  button,
-  input,
-  textarea,
-  select,
-  [role="button"] {
-    cursor: url("/frontend//app//src//assets/cursor.png") 16 16, auto;
-  }
-}
+

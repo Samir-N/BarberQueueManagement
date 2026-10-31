@@ -22,7 +22,7 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax',
   path: '/',
-  maxAge: 86400000, // 1 day
+  maxAge: 604800000, 
 };
 
 const generatePublicId = (length = 5) => {
