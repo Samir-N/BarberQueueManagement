@@ -1,32 +1,61 @@
-# Barber Queue
+# 💈 Barber Queue
 
 An easy way to book haircut appointments online without waiting in line.
 
-**Live Link:** [https://barber-queue-management.vercel.app/](https://barber-queue-management.vercel.app/)
+**Live Link:** [Barber Queue](https://barber-queue-management.vercel.app/)
 
 ---
 
-## What it does
+## About
 
-This app connects customers with barbers so you don't have to wait around at the shop.
+Barber Queue is a web-based appointment and queue management system that connects customers with barbers. Users can book appointments, manage their bookings, and receive live queue updates without having to wait around at the barbershop.
 
 ---
 
 ## Features
 
 ### Users
-* Book a haircut
-* Change or cancel your booking
-* Edit your profile
+- Book haircut appointments.
+- Select services, barbers, and available time slots.
+- Change or cancel bookings.
+- Edit personal profile.
+- Track booking status.
 
 ### Barbers
-* Get new booking requests
-* Accept or cancel requests
-* Mark a haircut as completed
+- Receive new booking requests.
+- Accept or cancel booking requests.
+- Manage appointments.
+- Mark haircuts as completed.
 
-### Extra Features
-* Live queue updates
-* In-app calling (coming soon)
+### Additional Features
+- Real-time queue updates.
+- Role-based access control.
+- Separate user and barber dashboards.
+- In-app calling (Coming Soon).
+
+---
+
+## Tech Stack
+
+- **Frontend:** React.js, Material UI (MUI)
+- **Backend:** Node.js, Express.js
+- **Database:** MongoDB
+- **State Management:** Redux Toolkit
+- **Real-time Communication:** Socket.IO
+- **Deployment:** Vercel
+
+---
+
+## Demo Credentials
+
+Use the following accounts to explore and test the application.
+
+| Role | Contact Number | Password |
+|---|---|---|
+| User | `981212121212` | `asdf1` |
+| Barber | `9813131313` | `asdf1` |
+
+*These credentials are provided for testing and demonstration purposes only.*
 
 ---
 
@@ -36,8 +65,10 @@ This app connects customers with barbers so you don't have to wait around at the
 ![Login Screen](./Site%20Images/Images/Login%20Img.png)
 
 ### Booking Process
-![Services Select](./Site%20Images/Images/Services%20Select.png)
-![Barber and Time](./Site%20Images/Images/Barber%20and%20Time%20.png)
+
+| Service Selection | Barber & Time |
+|---|---|
+| ![Services Select](./Site%20Images/Images/Services%20Select.png) | ![Barber and Time](./Site%20Images/Images/Barber%20and%20Time%20.png) |
 
 ### User Dashboard
 ![User Dashboard](./Site%20Images/Images/User%20Dashboard%20.png)
@@ -46,3 +77,19 @@ This app connects customers with barbers so you don't have to wait around at the
 ![Barber Actions](./Site%20Images/Images/Barber%20Actions.png)
 
 ---
+
+## Live Demo
+
+[Visit Barber Queue](https://barber-queue-management.vercel.app/)
+
+---
+
+## Developer
+
+**Samir Niroula**
+
+- GitHub: [Samir-N](https://github.com/Samir-N)
+
+---
+
+*Built to simplify haircut appointments and improve barbershop queue management.*
