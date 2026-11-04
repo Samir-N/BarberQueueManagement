@@ -39,6 +39,7 @@ const barberSchema = new mongoose.Schema(
 },
     role: {
       type: String,
+      enum: ["barber", "masterBarber"],
       default: 'barber',
     },
     barberStatus: {

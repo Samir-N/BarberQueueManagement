@@ -59,6 +59,12 @@ const CANCELLED_STATUSES = ["cancelled", "canceled"];
    A booking only stores the service id, so names and prices are looked up here. */
 const selectServices = (state) => state.service?.services;
 
+/* Logged-in user and the role that sees everything.
+   - "masterBarber": sees the total of ALL barbers
+   - anyone else (e.g. "barber"): sees only their own bookings */
+const selectUser = (state) => state.auth?.user;
+const MASTER_ROLE = "masterBarber";
+
 /* ---------- THEME (same colours as the app's Button variants) ---------- */
 const C = {
   gold: "#FFC300",
@@ -114,6 +120,7 @@ const normalize = (b, lookup) => {
 
   return {
     when,
+    barberId: idOf(b.barberId),
     status: String(b.status || "").toLowerCase(),
     svcId,
     svcName: svc?.serviceName || svc?.name || listed?.name || `Service ${svcId.slice(-4)}`,
@@ -339,6 +346,11 @@ const BarberAnalytics = () => {
   const bookings = useSelector(selectBookings) || NO_BOOKINGS;
   const services = useSelector(selectServices) || NO_BOOKINGS;
 
+  /* who is logged in, and are they the master barber? */
+  const user = useSelector(selectUser);
+  const isMaster = user?.role === MASTER_ROLE;
+  const myId = idOf(user?._id);
+
   /* service id -> { name, price } */
   const serviceLookup = useMemo(() => {
     const map = {};
@@ -360,18 +372,20 @@ const BarberAnalytics = () => {
   const selectedKey = view.year * 12 + view.month;
   const monthName = months[view.month];
 
-  /* group every booking by month once */
+  /* group every booking by month once.
+     masterBarber: all barbers together. Anyone else: only their own bookings. */
   const byMonth = useMemo(() => {
     const map = new Map();
     bookings.forEach((raw) => {
       const b = normalize(raw, serviceLookup);
       if (!b) return;
+      if (!isMaster && (!myId || b.barberId !== myId)) return;
       const key = monthKey(b.when);
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(b);
     });
     return map;
-  }, [bookings, serviceLookup]);
+  }, [bookings, serviceLookup, isMaster, myId]);
 
   const data = useMemo(() => summarize(byMonth.get(selectedKey) || []), [byMonth, selectedKey]);
   const prevIncome = useMemo(() => summarize(byMonth.get(selectedKey - 1) || []).income, [byMonth, selectedKey]);
@@ -550,7 +564,9 @@ const BarberAnalytics = () => {
                     <IconBox isDesktop={isDesktop} size={36}>
                       <AccountBalanceWalletOutlined />
                     </IconBox>
-                    <Typography sx={{ fontSize: 15, fontWeight: 500, color: C.muted }}>Income</Typography>
+                    <Typography sx={{ fontSize: 15, fontWeight: 500, color: C.muted }}>
+                      {isMaster ? "Total income (all barbers)" : "Income"}
+                    </Typography>
                   </Box>
 
                   <Typography
@@ -675,7 +691,9 @@ const BarberAnalytics = () => {
                   <Typography sx={{ fontSize: isDesktop ? 32 : 38, fontWeight: isDesktop ? 700 : 800, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: isDesktop ? "-0.5px" : "normal" }}>
                     {formatZero(data.customers)}
                   </Typography>
-                  <Typography sx={{ mt: 0.75, fontSize: 14, fontWeight: 500, color: C.muted }}>Customers</Typography>
+                  <Typography sx={{ mt: 0.75, fontSize: 14, fontWeight: 500, color: C.muted }}>
+                    {isMaster ? "Total customers" : "Customers"}
+                  </Typography>
                 </Box>
               </Card>
 
