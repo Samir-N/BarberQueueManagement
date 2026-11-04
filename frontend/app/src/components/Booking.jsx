@@ -9,6 +9,8 @@ import {
   ButtonBase,
   Button,
   CircularProgress,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { useDispatch, useSelector } from 'react-redux';
@@ -16,114 +18,114 @@ import { showAlert } from '../redux/features/alertSlice';
 import { hideBooking } from '../redux/features/bookingSlice';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PersonIcon from '@mui/icons-material/Person';
-import ContentCutIcon from '@mui/icons-material/ContentCut';
-import FaceIcon from '@mui/icons-material/Face';
-import ChildCareIcon from '@mui/icons-material/ChildCare';
-import DryCleaningIcon from '@mui/icons-material/DryCleaning';
 
 import TimeManager from '../components/TimeManager.jsx';
 
-/* ---------- design tokens (same palette as the rest of the app) ---------- */
+/* ---------- tokens ---------- */
 const GOLD = '#FFC300';
-const GOLD_DEEP = '#B8860B';
 const INK = '#1B263B';
-const MUTED = '#64748B';
+const MUTED = '#475569'; // darker than before so small text is easy to read
 const LINE = '#E2E8F0';
 
-/* 4 steps: one question per screen */
+/* One question per screen, in plain words */
 const TITLES = [
-  'What do you need?',
-  'Who would you like?',
-  'What time today?',
-  'Check and book',
+  'Pick a service',
+  'Pick a barber',
+  'Pick a time',
+  'Confirm booking',
 ];
 
 const barberName = (b) =>
   b?.name || `${b?.firstName || ''} ${b?.lastName || ''}`.trim() || 'Barber';
 
-const serviceIcon = (serviceName = '') => {
-  const n = serviceName.toLowerCase();
-  const sx = { fontSize: 24, color: GOLD_DEEP };
-  if (n.includes('child') || n.includes('kid') || n.includes('boy')) return <ChildCareIcon sx={sx} />;
-  if (n.includes('shave') && n.includes('hair')) return <ContentCutIcon sx={sx} />;
-  if (n.includes('shave') || n.includes('beard')) return <DryCleaningIcon sx={sx} />;
-  if (n.includes('hair') || n.includes('cut') || n.includes('adult')) return <FaceIcon sx={sx} />;
-  return <ContentCutIcon sx={sx} />;
-};
-
-/* ---------- one big tappable row, used for services and barbers ---------- */
-const OptionRow = ({ selected, onClick, icon, title, subtitle, right }) => (
+/* ---------- big tap row for services and barbers ---------- */
+const OptionRow = ({ selected, onClick, leading, title, subtitle, price }) => (
   <ButtonBase
     onClick={onClick}
     aria-pressed={selected}
     sx={{
       width: '100%',
-      minHeight: 68,
-      p: 1.5,
-      gap: 1.5,
+      minHeight: 84,
+      px: 2,
+      py: 1.5,
+      gap: 2,
       justifyContent: 'flex-start',
       textAlign: 'left',
-      borderRadius: '12px',
+      borderRadius: '16px',
       border: '2px solid',
       borderColor: selected ? GOLD : LINE,
-      backgroundColor: selected ? '#FFFDF4' : '#FFFFFF',
-      transition: 'border-color .15s ease, background-color .15s ease, transform .1s ease',
-      '&:active': { transform: 'scale(0.985)' },
+      backgroundColor: selected ? GOLD : '#FFFFFF',
+      color: INK,
+      transition: 'background-color .15s ease, border-color .15s ease, transform .1s ease',
+      '&:active': { transform: 'scale(0.98)' },
     }}
   >
-    <Box
-      sx={{
-        width: 44,
-        height: 44,
-        flexShrink: 0,
-        borderRadius: '10px',
-        backgroundColor: '#F8FAFC',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {icon}
-    </Box>
+    {leading}
     <Box sx={{ flex: 1, minWidth: 0 }}>
-      <Typography sx={{ fontSize: 16, fontWeight: 600, color: INK, lineHeight: 1.25 }}>{title}</Typography>
+      <Typography sx={{ fontSize: 20, fontWeight: 700, lineHeight: 1.25, color: INK }}>
+        {title}
+      </Typography>
       {subtitle && (
-        <Typography sx={{ fontSize: 13, color: MUTED, mt: 0.25 }}>{subtitle}</Typography>
+        <Typography sx={{ fontSize: 16, color: selected ? INK : MUTED, mt: 0.5 }}>
+          {subtitle}
+        </Typography>
       )}
     </Box>
-    {right && (
-      <Typography sx={{ fontSize: 16, fontWeight: 700, color: INK, flexShrink: 0 }}>{right}</Typography>
+    {price && (
+      <Typography sx={{ fontSize: 22, fontWeight: 800, color: INK, flexShrink: 0 }}>
+        {price}
+      </Typography>
     )}
   </ButtonBase>
 );
 
-/* ---------- one line in the final summary, tap to change ---------- */
+/* ---------- big line in the final summary ---------- */
 const SummaryRow = ({ label, value, onChange }) => (
-  <ButtonBase
-    onClick={onChange}
+  <Box
     sx={{
-      width: '100%',
-      py: 1.75,
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'space-between',
-      textAlign: 'left',
+      gap: 2,
+      py: 2,
       borderBottom: `1px solid ${LINE}`,
     }}
   >
-    <Box>
-      <Typography sx={{ fontSize: 13, color: MUTED }}>{label}</Typography>
-      <Typography sx={{ fontSize: 17, fontWeight: 600, color: INK }}>{value}</Typography>
+    <Box sx={{ minWidth: 0 }}>
+      <Typography sx={{ fontSize: 16, color: MUTED }}>{label}</Typography>
+      <Typography sx={{ fontSize: 24, fontWeight: 700, color: INK, lineHeight: 1.25 }}>
+        {value}
+      </Typography>
     </Box>
-    <Typography sx={{ fontSize: 14, fontWeight: 600, color: GOLD_DEEP }}>Change</Typography>
-  </ButtonBase>
+    {onChange && (
+      <Button
+        onClick={onChange}
+        sx={{
+          minHeight: 44,
+          px: 2,
+          fontSize: 16,
+          fontWeight: 700,
+          textTransform: 'none',
+          color: INK,
+          border: `2px solid ${LINE}`,
+          borderRadius: '12px',
+          flexShrink: 0,
+        }}
+      >
+        Change
+      </Button>
+    )}
+  </Box>
 );
 
 const Booking = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const { user } = useSelector((state) => state.auth || {});
   const { services = [], loading: servicesLoading } = useSelector((state) => state.service || {});
@@ -136,7 +138,6 @@ const Booking = () => {
   const [barbersLoading, setBarbersLoading] = useState(false);
   const [formData, setFormData] = useState({ service: '', barber: '', time: null });
 
-  /* ---------- load barbers once ---------- */
   useEffect(() => {
     let isMounted = true;
     const fetchBarbers = async () => {
@@ -166,7 +167,7 @@ const Booking = () => {
     dispatch(hideBooking());
   };
 
-  /* Short pause after a tap so the person sees their choice highlight, then move on */
+  /* short pause so the person sees their choice light up, then move on */
   const goTo = (next) => setTimeout(() => setStep(next), 180);
 
   const handleSelectService = (id) => {
@@ -178,7 +179,6 @@ const Booking = () => {
     setFormData((prev) => ({
       ...prev,
       barber: id,
-      // a different barber has different free times
       time: prev.barber === id ? prev.time : null,
     }));
     goTo(2);
@@ -200,7 +200,6 @@ const Booking = () => {
         let [hours, minutes] = t.split(':').map(Number);
         if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
         if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
-        // zero the ms so every user's 8:00 PM is the exact same value
         parsedTime = dayjs().hour(hours).minute(minutes).second(0).millisecond(0);
       } else {
         parsedTime = dayjs(selectedTime).second(0).millisecond(0);
@@ -214,7 +213,7 @@ const Booking = () => {
   }, []);
 
   const handleSubmit = async () => {
-    if (submitting) return; // stops accidental double taps
+    if (submitting) return;
 
     if (!formData.service || !formData.barber || !formData.time) {
       dispatch(showAlert({ message: 'Please complete all booking fields.', type: 'error' }));
@@ -252,81 +251,83 @@ const Booking = () => {
 
   const selectedService = services.find((s) => s._id === formData.service);
   const selectedBarber = barbers.find((b) => b._id === formData.barber);
+  const onConfirm = step === 3 && selectedService && selectedBarber && formData.time;
 
   if (!user || servicesLoading || services.length === 0) return null;
 
   return (
     <Dialog
       open={open && showBooking !== false}
+      fullScreen={isMobile}
       onClose={(event, reason) => {
-        // ignore stray taps outside so nobody loses their progress
         if (reason !== 'backdropClick') handleClose();
       }}
       maxWidth={false}
       aria-labelledby="booking-dialog-title"
       sx={{
         zIndex: 1200,
-        // bottom sheet on phones (thumb reach), centred card on larger screens
-        '& .MuiDialog-container': { alignItems: { xs: 'flex-end', sm: 'center' } },
-        '& .MuiBackdrop-root': { backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' },
+        '& .MuiBackdrop-root': { backgroundColor: 'rgba(0,0,0,0.6)' },
       }}
       PaperProps={{
         sx: {
           m: 0,
-          width: { xs: '100%', sm: 460 },
-          maxHeight: { xs: '92vh', sm: '90vh' },
-          borderRadius: { xs: '20px 20px 0 0', sm: '16px' },
-          px: { xs: 2, sm: 3 },
-          pt: 1.5,
+          width: { xs: '100%', sm: 480 },
+          height: { xs: '100%', sm: 'auto' },
+          maxHeight: { xs: '100%', sm: '90vh' },
+          borderRadius: { xs: 0, sm: '16px' },
+          px: 2.5,
+          pt: { xs: 'calc(12px + env(safe-area-inset-top))', sm: 2 },
           pb: { xs: 'calc(16px + env(safe-area-inset-bottom))', sm: 3 },
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
         },
       }}
     >
-      {/* Top bar: back, progress, close */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      {/* Top bar */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
         <IconButton
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           aria-label="Go back"
-          sx={{ color: INK, visibility: step === 0 ? 'hidden' : 'visible' }}
+          sx={{ width: 48, height: 48, ml: -1, color: INK, visibility: step === 0 ? 'hidden' : 'visible' }}
         >
-          <ArrowBackIcon />
+          <ArrowBackIcon sx={{ fontSize: 28 }} />
         </IconButton>
 
-        <Box
-          role="progressbar"
-          aria-valuemin={1}
-          aria-valuemax={4}
-          aria-valuenow={step + 1}
-          aria-label={`Step ${step + 1} of 4`}
-          sx={{ flex: 1, display: 'flex', gap: 0.75 }}
-        >
-          {[0, 1, 2, 3].map((i) => (
-            <Box
-              key={i}
-              sx={{
-                flex: 1,
-                height: 4,
-                borderRadius: 2,
-                backgroundColor: i <= step ? GOLD : LINE,
-                transition: 'background-color .25s ease',
-              }}
-            />
-          ))}
-        </Box>
+        <Typography sx={{ fontSize: 17, fontWeight: 700, color: MUTED }}>
+          Step {step + 1} of 4
+        </Typography>
 
-        <IconButton onClick={handleClose} aria-label="Close" sx={{ color: MUTED }}>
-          <CloseIcon />
+        <IconButton
+          onClick={handleClose}
+          aria-label="Close"
+          sx={{ width: 48, height: 48, mr: -1, color: INK }}
+        >
+          <CloseIcon sx={{ fontSize: 28 }} />
         </IconButton>
       </Box>
 
+      {/* Progress */}
+      <Box sx={{ display: 'flex', gap: 0.75, mb: 3 }}>
+        {[0, 1, 2, 3].map((i) => (
+          <Box
+            key={i}
+            sx={{
+              flex: 1,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: i <= step ? GOLD : LINE,
+              transition: 'background-color .25s ease',
+            }}
+          />
+        ))}
+      </Box>
+
+      {/* The one question for this screen */}
       <Typography
         id="booking-dialog-title"
         component="h2"
-        sx={{ fontSize: 24, fontWeight: 700, color: INK, mb: 2, lineHeight: 1.2 }}
+        sx={{ fontSize: 30, fontWeight: 800, color: INK, mb: 2.5, lineHeight: 1.15 }}
       >
         {TITLES[step]}
       </Typography>
@@ -335,6 +336,7 @@ const Booking = () => {
         key={step}
         sx={{
           p: '0 !important',
+          flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
           scrollbarWidth: 'none',
@@ -347,32 +349,31 @@ const Booking = () => {
           '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
         }}
       >
-        {/* 1. Service: tap one, move on */}
+        {/* 1. Service */}
         {step === 0 && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, pb: 0.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pb: 1 }}>
             {services.map((service) => (
               <OptionRow
                 key={service._id}
                 selected={formData.service === service._id}
                 onClick={() => handleSelectService(service._id)}
-                icon={serviceIcon(service.serviceName)}
                 title={service.serviceName}
                 subtitle={`${service.duration} min`}
-                right={`Rs. ${service.price}`}
+                price={`Rs. ${service.price}`}
               />
             ))}
           </Box>
         )}
 
-        {/* 2. Barber: tap one, move on */}
+        {/* 2. Barber */}
         {step === 1 && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, pb: 0.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pb: 1 }}>
             {barbersLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress size={28} sx={{ color: GOLD }} />
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+                <CircularProgress size={36} sx={{ color: GOLD }} />
               </Box>
             ) : barbers.length === 0 ? (
-              <Typography sx={{ fontSize: 15, color: MUTED, py: 2 }}>
+              <Typography sx={{ fontSize: 18, color: MUTED, py: 2 }}>
                 No barbers are available right now. Please try again later.
               </Typography>
             ) : (
@@ -381,12 +382,12 @@ const Booking = () => {
                   key={barber._id}
                   selected={formData.barber === barber._id}
                   onClick={() => handleSelectBarber(barber._id)}
-                  icon={
+                  leading={
                     <Avatar
                       src={barber.avatar || barber.image}
-                      sx={{ width: 44, height: 44, bgcolor: '#F1F5F9', color: GOLD_DEEP }}
+                      sx={{ width: 56, height: 56, bgcolor: '#F1F5F9', color: INK }}
                     >
-                      <PersonIcon />
+                      <PersonIcon sx={{ fontSize: 30 }} />
                     </Avatar>
                   }
                   title={barberName(barber)}
@@ -396,7 +397,7 @@ const Booking = () => {
           </Box>
         )}
 
-        {/* 3. Time: only free times are shown, tap one, move on */}
+        {/* 3. Time */}
         {step === 2 && (
           <TimeManager
             key={formData.barber || 'no-barber'}
@@ -407,58 +408,47 @@ const Booking = () => {
           />
         )}
 
-        {/* 4. Confirm: one summary, one big button */}
-        {step === 3 && selectedService && selectedBarber && formData.time && (
+        {/* 4. Confirm */}
+        {onConfirm && (
           <Box>
             <Box sx={{ borderTop: `1px solid ${LINE}` }}>
               <SummaryRow label="Service" value={selectedService.serviceName} onChange={() => setStep(0)} />
               <SummaryRow label="Barber" value={barberName(selectedBarber)} onChange={() => setStep(1)} />
               <SummaryRow
-                label="Time"
-                value={`Today, ${formData.time.format('h:mm A')}`}
+                label="Time (today)"
+                value={formData.time.format('h:mm A')}
                 onChange={() => setStep(2)}
               />
+              <SummaryRow label="Price" value={`Rs. ${selectedService.price}`} />
             </Box>
-
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', py: 2.5 }}>
-              <Typography sx={{ fontSize: 15, color: MUTED }}>
-                About {selectedService.duration} min
-              </Typography>
-              <Typography sx={{ fontSize: 26, fontWeight: 700, color: INK }}>
-                Rs. {selectedService.price}
-              </Typography>
-            </Box>
-
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={handleSubmit}
-              disabled={submitting}
-              startIcon={
-                submitting ? (
-                  <CircularProgress size={18} sx={{ color: INK }} />
-                ) : (
-                  <CheckCircleIcon />
-                )
-              }
-              sx={{
-                py: 1.75,
-                fontSize: 17,
-                fontWeight: 700,
-                textTransform: 'none',
-                backgroundColor: GOLD,
-                color: INK,
-                borderRadius: '12px',
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: '#E6AF00', boxShadow: 'none' },
-                '&.Mui-disabled': { backgroundColor: GOLD, color: INK, opacity: 0.7 },
-              }}
-            >
-              {submitting ? 'Booking...' : 'Book now'}
-            </Button>
           </Box>
         )}
       </DialogContent>
+
+      {/* Big button stays pinned at the bottom so it is always in thumb reach */}
+      {onConfirm && (
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={submitting}
+          sx={{
+            mt: 2,
+            minHeight: 64,
+            fontSize: 20,
+            fontWeight: 800,
+            textTransform: 'none',
+            backgroundColor: GOLD,
+            color: INK,
+            borderRadius: '16px',
+            boxShadow: 'none',
+            '&:hover': { backgroundColor: '#E6AF00', boxShadow: 'none' },
+            '&.Mui-disabled': { backgroundColor: GOLD, color: INK, opacity: 0.7 },
+          }}
+        >
+          {submitting ? <CircularProgress size={26} sx={{ color: INK }} /> : 'Book now'}
+        </Button>
+      )}
     </Dialog>
   );
 };

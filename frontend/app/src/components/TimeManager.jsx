@@ -8,6 +8,7 @@ const EVENING_SLOTS = [
   "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM",
   "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM", "11:40 PM",
 ];
+const ALL_SLOTS = [...MORNING_SLOTS, ...EVENING_SLOTS];
 
 const getSlotDayjs = (timeString) => {
   const [time, modifier] = timeString.split(" ");
@@ -19,7 +20,12 @@ const getSlotDayjs = (timeString) => {
   return dayjs().hour(hours).minute(minutes).second(0).millisecond(0);
 };
 
-const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
+/**
+ * onlyAvailable (default false):
+ *   false -> original layout: Morning / Afternoon groups, unavailable slots greyed out, legend.
+ *   true  -> simple layout for the booking flow: one grid with ONLY the free times.
+ */
+const TimeManager = ({ barberId, serviceId, onTimeSelect, onlyAvailable = false }) => {
   const [selectedTime, setSelectedTime] = useState(null);
   const [bookedSlots, setBookedSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -108,18 +114,19 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
         disabled={!available}
         onClick={() => handleSelect(time)}
         sx={{
-          py: 1,
-          px: 1.5,
-          borderRadius: 1,
-          fontSize: "0.8rem",
-          fontWeight: isSelected ? 600 : 400,
-          border: "1px solid",
+          minHeight: onlyAvailable ? 60 : 48,
+          px: 1,
+          borderRadius: onlyAvailable ? "14px" : "10px",
+          fontSize: onlyAvailable ? "1.15rem" : "0.95rem",
+          fontWeight: onlyAvailable ? 700 : isSelected ? 700 : 500,
+          border: "2px solid",
           borderColor: isSelected ? "#FFC300" : available ? "#E2E8F0" : "#F1F5F9",
-          bgcolor: isSelected ? "#FFFDF4" : available ? "#FFFFFF" : "#F8FAFC",
-          color: isSelected ? "#1B263B" : available ? "#334155" : "#CBD5E1",
+          bgcolor: isSelected ? (onlyAvailable ? "#FFC300" : "#FFFDF4") : available ? "#FFFFFF" : "#F8FAFC",
+          color: isSelected ? "#1B263B" : available ? (onlyAvailable ? "#1B263B" : "#334155") : "#CBD5E1",
           cursor: available ? "pointer" : "not-allowed",
           transition: "all 0.15s ease",
           "&:hover:not(.Mui-disabled)": { borderColor: "#FFC300" },
+          "&:active:not(.Mui-disabled)": { transform: "scale(0.97)" },
         }}
       >
         {time}
@@ -130,12 +137,49 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
   const gridSx = {
     display: "grid",
     gridTemplateColumns: { xs: "repeat(3, 1fr)", sm: "repeat(4, 1fr)" },
-    gap: 1,
+    gap: 1.25,
   };
 
+  const retryButton = (
+    <Button
+      size="small"
+      onClick={fetchBookedSlots}
+      sx={{ fontSize: "14px", color: "#EF4444", textTransform: "none", p: 0, minWidth: 0 }}
+    >
+      Could not load times. Tap to retry
+    </Button>
+  );
+
+  /* ---------- simple mode: only the free times ---------- */
+  if (onlyAvailable) {
+    const freeSlots = noBarber ? [] : ALL_SLOTS.filter(isAvailable);
+
+    if (loadingSlots) {
+      return (
+        <Box sx={gridSx}>
+          {Array.from({ length: 9 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={60} />
+          ))}
+        </Box>
+      );
+    }
+
+    if (error) return <Box sx={{ py: 2 }}>{retryButton}</Box>;
+
+    if (freeSlots.length === 0) {
+      return (
+        <Typography sx={{ fontSize: 18, color: "#475569", py: 2 }}>
+          No times left today for this barber. Go back and pick another barber.
+        </Typography>
+      );
+    }
+
+    return <Box sx={gridSx}>{freeSlots.map(renderSlot)}</Box>;
+  }
+
+  /* ---------- original mode ---------- */
   return (
     <Box sx={{ mb: 2 }}>
-      {/* Header & Status */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mb: 1.5 }}>
         <Typography sx={{ fontSize: "14px", fontWeight: 600, color: "#1B263B" }}>
           Today ({now.format("MMM D")})
@@ -145,31 +189,21 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
             Select a barber first
           </Typography>
         )}
-        {!noBarber && error && !loadingSlots && (
-          <Button
-            size="small"
-            onClick={fetchBookedSlots}
-            sx={{ fontSize: "12px", color: "#EF4444", textTransform: "none", p: 0, minWidth: 0 }}
-          >
-            Retry loading
-          </Button>
-        )}
+        {!noBarber && error && !loadingSlots && retryButton}
       </Box>
 
-      {/* Slots Body */}
       {loadingSlots ? (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           {[3, 6].map((count, i) => (
             <Box key={i} sx={gridSx}>
               {Array.from({ length: count }).map((_, j) => (
-                <Skeleton key={j} variant="rounded" height={36} />
+                <Skeleton key={j} variant="rounded" height={48} />
               ))}
             </Box>
           ))}
         </Box>
       ) : (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {/* Morning Slots */}
           <Box>
             <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, mb: 0.75 }}>
               Morning
@@ -177,7 +211,6 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
             <Box sx={gridSx}>{MORNING_SLOTS.map(renderSlot)}</Box>
           </Box>
 
-          {/* Evening Slots */}
           <Box>
             <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, mb: 0.75 }}>
               Afternoon & Evening
@@ -185,7 +218,6 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect }) => {
             <Box sx={gridSx}>{EVENING_SLOTS.map(renderSlot)}</Box>
           </Box>
 
-          {/* Clean Legend */}
           <Box sx={{ display: "flex", gap: 2, justifyContent: "center", pt: 0.5 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
               <Box sx={{ width: 8, height: 8, bgcolor: "#FFFFFF", border: "1px solid #CBD5E1", borderRadius: "50%" }} />
