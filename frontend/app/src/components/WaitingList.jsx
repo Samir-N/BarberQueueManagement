@@ -285,7 +285,7 @@ const WaitingList = () => {
               </Button>
             </RoleGuard>
 
-            <RoleGuard allowedRoles={["admin", "barber"]} userRole={user?.role}>
+            <RoleGuard allowedRoles={["admin", "barber", "masterBarber"]} userRole={user?.role}>
               <Button
                 variant={showOnlyPending ? "tertiary" : "primary"}
                 size="sm"
@@ -343,7 +343,7 @@ const WaitingList = () => {
                       </Box>
                     </Stack>
 
-                    <RoleGuard allowedRoles={["admin", "barber"]} userRole={user?.role}>
+                    <RoleGuard allowedRoles={["admin", "barber", "masterBarber"]} userRole={user?.role}>
                       {isPending && (
                         <Stack direction="row" spacing={1} mt={1.5}>
                           <Button variant="success" size="sm" onClick={() => handleStatusChange(b._id, "confirmed")} className="w-full">
@@ -406,7 +406,7 @@ const WaitingList = () => {
                     <TableCell sx={{ fontWeight: 600 }}>Service</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
                     <TableCell sx={{ fontWeight: 600 }} align="center">Status</TableCell>
-                    <RoleGuard allowedRoles={["admin", "barber"]} userRole={user?.role}>
+                    <RoleGuard allowedRoles={["admin", "barber", "masterBarber"]} userRole={user?.role}>
                       <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
                     </RoleGuard>
                   </TableRow>
@@ -443,7 +443,7 @@ const WaitingList = () => {
                           {renderStatusBadge(b.status)}
                         </TableCell>
 
-                        <RoleGuard allowedRoles={["admin", "barber"]} userRole={user?.role}>
+                        <RoleGuard allowedRoles={["admin", "barber", "masterBarber"]} userRole={user?.role}>
                           <TableCell align="center">
                             {isPending && (
                               <Stack direction="row" spacing={1} justifyContent="center">

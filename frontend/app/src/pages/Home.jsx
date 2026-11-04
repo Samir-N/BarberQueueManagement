@@ -140,7 +140,7 @@ const Home = () => {
               </Stack>
             </RoleGuard>
 
-           <RoleGuard allowedRoles={['barber']}>
+           <RoleGuard allowedRoles={['barber', 'masterBarber']}>
   <Box sx={{ width: '100%', display: 'flex', flexDirection: 'row', gap: 2 }}>
     <Button
       variant="secondary"
