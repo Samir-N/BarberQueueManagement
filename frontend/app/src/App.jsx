@@ -44,6 +44,10 @@ import {
 axios.defaults.baseURL = import.meta.env.VITE_API_URL ?? "";
 axios.defaults.withCredentials = true;
 
+// Roles that work on the barber side of the app (barber + the new masterBarber)
+const STAFF_ROLES = ["barber", "masterBarber"];
+const isStaffRole = (role) => STAFF_ROLES.includes(role);
+
 function App() {
   const dispatch = useDispatch();
   const playSound = useSoundNotification();
@@ -56,6 +60,10 @@ function App() {
 
   const currentUserId = user?._id || user?.id;
   const userRole = user?.role;
+
+  // PrivateRoutes takes ONE role, so give it the logged-in staff role.
+  // (Logged out or a normal user falls back to "barber" and gets redirected as before.)
+  const staffRole = userRole === "masterBarber" ? "masterBarber" : "barber";
 
   // ---------------------------------------------------------------
   // Initial data: services + session check
@@ -81,10 +89,10 @@ function App() {
           const role = localStorage.getItem("role");
 
           if (role) {
-            const endpoint =
-              role === "barber"
-                ? "/api/v1/barber/getBarberData"
-                : "/api/v1/user/getUserData";
+            // barber AND masterBarber both restore from the barber endpoint
+            const endpoint = isStaffRole(role)
+              ? "/api/v1/barber/getBarberData"
+              : "/api/v1/user/getUserData";
 
             const userRes = await axios.get(endpoint);
 
@@ -161,8 +169,9 @@ function App() {
           : booking?.barberId;
 
       // Notify ONLY the barber the booking is assigned to
+      // (a masterBarber is notified for bookings assigned to them too)
       if (
-        userRole === "barber" &&
+        isStaffRole(userRole) &&
         String(bookingBarberId) === String(currentUserId)
       ) {
         playSound();
@@ -227,8 +236,8 @@ function App() {
               <Route path="/user/dashboard" element={<UserDashboard />} />
             </Route>
 
-            {/* Barber Only Routes */}
-            <Route element={<PrivateRoutes allowedRole={"barber"} />}>
+            {/* Barber + masterBarber Routes */}
+            <Route element={<PrivateRoutes allowedRole={staffRole} />}>
               <Route path="/barber/dashboard" element={<BarberDashboard />} />
               <Route path="/barber/viewAnalytics" element={<BarberAnalytics />} />
             </Route>
