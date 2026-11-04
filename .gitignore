@@ -1,3 +1,4 @@
+
 # Dependencies
 node_modules/
 **/node_modules/
@@ -27,8 +28,8 @@ coverage/
 # Cache
 .cache/
 .parcel-cache/
-.eslintcache/
-.stylelintcache/
+.eslintcache
+.stylelintcache
 *.tsbuildinfo
 
 # OS files
@@ -45,3 +46,15 @@ Thumbs.db
 
 # Local planning/notes
 Planning.txt
+
+# Playwright
+/playwright.config.js
+/tests/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# GitHub
+/.github/

@@ -1,116 +1,220 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Button,
   Box,
   Typography,
-  Stack,
   Dialog,
   DialogContent,
   IconButton,
-  Chip,
   Avatar,
-  CircularProgress
-} from "@mui/material";
+  ButtonBase,
+  Button,
+  CircularProgress,
+} from '@mui/material';
 import dayjs from 'dayjs';
 import { useDispatch, useSelector } from 'react-redux';
-import { showAlert, showLoading, hideLoading } from '../redux/features/alertSlice';
+import { showAlert } from '../redux/features/alertSlice';
 import { hideBooking } from '../redux/features/bookingSlice';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PersonIcon from '@mui/icons-material/Person';
-
 import ContentCutIcon from '@mui/icons-material/ContentCut';
 import FaceIcon from '@mui/icons-material/Face';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
 import DryCleaningIcon from '@mui/icons-material/DryCleaning';
 
 import TimeManager from '../components/TimeManager.jsx';
-import { useNavigate } from "react-router-dom";
+
+/* ---------- design tokens (same palette as the rest of the app) ---------- */
+const GOLD = '#FFC300';
+const GOLD_DEEP = '#B8860B';
+const INK = '#1B263B';
+const MUTED = '#64748B';
+const LINE = '#E2E8F0';
+
+/* 4 steps: one question per screen */
+const TITLES = [
+  'What do you need?',
+  'Who would you like?',
+  'What time today?',
+  'Check and book',
+];
+
+const barberName = (b) =>
+  b?.name || `${b?.firstName || ''} ${b?.lastName || ''}`.trim() || 'Barber';
+
+const serviceIcon = (serviceName = '') => {
+  const n = serviceName.toLowerCase();
+  const sx = { fontSize: 24, color: GOLD_DEEP };
+  if (n.includes('child') || n.includes('kid') || n.includes('boy')) return <ChildCareIcon sx={sx} />;
+  if (n.includes('shave') && n.includes('hair')) return <ContentCutIcon sx={sx} />;
+  if (n.includes('shave') || n.includes('beard')) return <DryCleaningIcon sx={sx} />;
+  if (n.includes('hair') || n.includes('cut') || n.includes('adult')) return <FaceIcon sx={sx} />;
+  return <ContentCutIcon sx={sx} />;
+};
+
+/* ---------- one big tappable row, used for services and barbers ---------- */
+const OptionRow = ({ selected, onClick, icon, title, subtitle, right }) => (
+  <ButtonBase
+    onClick={onClick}
+    aria-pressed={selected}
+    sx={{
+      width: '100%',
+      minHeight: 68,
+      p: 1.5,
+      gap: 1.5,
+      justifyContent: 'flex-start',
+      textAlign: 'left',
+      borderRadius: '12px',
+      border: '2px solid',
+      borderColor: selected ? GOLD : LINE,
+      backgroundColor: selected ? '#FFFDF4' : '#FFFFFF',
+      transition: 'border-color .15s ease, background-color .15s ease, transform .1s ease',
+      '&:active': { transform: 'scale(0.985)' },
+    }}
+  >
+    <Box
+      sx={{
+        width: 44,
+        height: 44,
+        flexShrink: 0,
+        borderRadius: '10px',
+        backgroundColor: '#F8FAFC',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {icon}
+    </Box>
+    <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Typography sx={{ fontSize: 16, fontWeight: 600, color: INK, lineHeight: 1.25 }}>{title}</Typography>
+      {subtitle && (
+        <Typography sx={{ fontSize: 13, color: MUTED, mt: 0.25 }}>{subtitle}</Typography>
+      )}
+    </Box>
+    {right && (
+      <Typography sx={{ fontSize: 16, fontWeight: 700, color: INK, flexShrink: 0 }}>{right}</Typography>
+    )}
+  </ButtonBase>
+);
+
+/* ---------- one line in the final summary, tap to change ---------- */
+const SummaryRow = ({ label, value, onChange }) => (
+  <ButtonBase
+    onClick={onChange}
+    sx={{
+      width: '100%',
+      py: 1.75,
+      justifyContent: 'space-between',
+      textAlign: 'left',
+      borderBottom: `1px solid ${LINE}`,
+    }}
+  >
+    <Box>
+      <Typography sx={{ fontSize: 13, color: MUTED }}>{label}</Typography>
+      <Typography sx={{ fontSize: 17, fontWeight: 600, color: INK }}>{value}</Typography>
+    </Box>
+    <Typography sx={{ fontSize: 14, fontWeight: 600, color: GOLD_DEEP }}>Change</Typography>
+  </ButtonBase>
+);
 
 const Booking = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const { user } = useSelector(state => state.auth || {});
-  const { services = [], loading: servicesLoading } = useSelector(state => state.service || {});
-  const { showBooking } = useSelector(state => state.booking || { showBooking: true });
+  const { user } = useSelector((state) => state.auth || {});
+  const { services = [], loading: servicesLoading } = useSelector((state) => state.service || {});
+  const { showBooking } = useSelector((state) => state.booking || { showBooking: true });
 
   const [open, setOpen] = useState(true);
-  const [activeStep, setActiveStep] = useState(0);
+  const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const [barbers, setBarbers] = useState([]);
   const [barbersLoading, setBarbersLoading] = useState(false);
+  const [formData, setFormData] = useState({ service: '', barber: '', time: null });
 
-  const [formData, setFormData] = useState({
-    service: "",
-    barber: "",
-    time: null,
-    timeSelected: false,
-  });
-
+  /* ---------- load barbers once ---------- */
   useEffect(() => {
     let isMounted = true;
-
     const fetchBarbers = async () => {
       try {
         setBarbersLoading(true);
         const token = localStorage.getItem('token');
         const res = await axios.get('/api/v1/barber/getAllBarbers', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-
         if (isMounted && res.data?.success) {
           setBarbers(res.data.data || res.data.barbers || []);
         }
       } catch (error) {
-        console.error("Failed to fetch barbers:", error);
+        console.error('Failed to fetch barbers:', error);
       } finally {
         if (isMounted) setBarbersLoading(false);
       }
     };
-
     fetchBarbers();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const getServiceIcon = (serviceName = '') => {
-    const name = serviceName.toLowerCase();
-    
-    if (name.includes('combo') || (name.includes('&') && name.includes('cut'))) {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-          <ContentCutIcon sx={{ fontSize: '18px', color: '#D99B00' }} />
-          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#D99B00' }}>+</span>
-        </Box>
-      );
-    }
-    if (name.includes('child') || name.includes('kid') || name.includes('boy')) {
-      return <ChildCareIcon sx={{ fontSize: '22px', color: '#D99B00' }} />;
-    }
-    if (name.includes('shave') || name.includes('beard') || name.includes('gillette') || name.includes('razor')) {
-      return <DryCleaningIcon sx={{ fontSize: '22px', color: '#D99B00' }} />;
-    }
-    if (name.includes('hair') || name.includes('cut') || name.includes('trim') || name.includes('adult')) {
-      return <FaceIcon sx={{ fontSize: '22px', color: '#D99B00' }} />;
-    }
-
-    return <ContentCutIcon sx={{ fontSize: '22px', color: '#D99B00' }} />;
-  };
-
   const handleClose = () => {
     setOpen(false);
     dispatch(hideBooking());
-  
   };
 
-  const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
+  /* Short pause after a tap so the person sees their choice highlight, then move on */
+  const goTo = (next) => setTimeout(() => setStep(next), 180);
+
+  const handleSelectService = (id) => {
+    setFormData((prev) => ({ ...prev, service: id }));
+    goTo(1);
+  };
+
+  const handleSelectBarber = (id) => {
+    setFormData((prev) => ({
+      ...prev,
+      barber: id,
+      // a different barber has different free times
+      time: prev.barber === id ? prev.time : null,
+    }));
+    goTo(2);
+  };
+
+  const handleTimeSelect = useCallback((selectedTime) => {
+    if (!selectedTime) {
+      setFormData((prev) => ({ ...prev, time: null }));
+      return;
+    }
+
+    let parsedTime = null;
+
+    if (dayjs.isDayjs(selectedTime)) {
+      parsedTime = selectedTime.second(0).millisecond(0);
+    } else if (typeof selectedTime === 'string') {
+      if (/am|pm/i.test(selectedTime)) {
+        const [t, modifier] = selectedTime.trim().split(/\s+/);
+        let [hours, minutes] = t.split(':').map(Number);
+        if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
+        // zero the ms so every user's 8:00 PM is the exact same value
+        parsedTime = dayjs().hour(hours).minute(minutes).second(0).millisecond(0);
+      } else {
+        parsedTime = dayjs(selectedTime).second(0).millisecond(0);
+      }
+    }
+
+    if (parsedTime && parsedTime.isValid()) {
+      setFormData((prev) => ({ ...prev, time: parsedTime }));
+      setTimeout(() => setStep(3), 180);
+    }
+  }, []);
+
+  const handleSubmit = async () => {
+    if (submitting) return; // stops accidental double taps
 
     if (!formData.service || !formData.barber || !formData.time) {
       dispatch(showAlert({ message: 'Please complete all booking fields.', type: 'error' }));
@@ -120,20 +224,20 @@ const Booking = () => {
     const bookingData = {
       service: formData.service,
       barberId: formData.barber,
-      bookingTime: formData.time ? formData.time.toISOString() : null,
+      bookingTime: formData.time.toISOString(),
     };
 
     try {
-      dispatch(showLoading());
+      setSubmitting(true);
       const token = localStorage.getItem('token');
       const res = await axios.post('/api/v1/user/bookingInfo', bookingData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.data?.success) {
         dispatch(showAlert({ message: 'Booking Successful!', type: 'success' }));
-        setFormData({ service: "", barber: "", time: null, timeSelected: false });
-        setActiveStep(0);
+        setFormData({ service: '', barber: '', time: null });
+        setStep(0);
         handleClose();
         navigate('/user/dashboard');
       } else {
@@ -142,331 +246,216 @@ const Booking = () => {
     } catch (error) {
       dispatch(showAlert({ message: error.response?.data?.message || 'Booking Failed!', type: 'error' }));
     } finally {
-      dispatch(hideLoading());
-      
+      setSubmitting(false);
     }
   };
 
-  const selectedService = services.find(s => s._id === formData.service);
-  const selectedBarber = barbers.find(b => b._id === formData.barber);
+  const selectedService = services.find((s) => s._id === formData.service);
+  const selectedBarber = barbers.find((b) => b._id === formData.barber);
 
-  const handleTimeSelect = (selectedTime) => {
-    if (!selectedTime) return;
-
-    let parsedTime = null;
-
-    if (dayjs.isDayjs(selectedTime)) {
-      parsedTime = selectedTime.second(0).millisecond(0);
-    } else if (typeof selectedTime === 'string') {
-      const hasMeridiem = /am|pm/i.test(selectedTime);
-      if (hasMeridiem) {
-        const [t, modifier] = selectedTime.trim().split(/\s+/);
-        let [hours, minutes] = t.split(':').map(Number);
-
-        if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
-        if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
-
-        // FIX: zero the milliseconds so every user's 8:00 PM is the exact same value
-        parsedTime = dayjs().hour(hours).minute(minutes).second(0).millisecond(0);
-      } else {
-        parsedTime = dayjs(selectedTime).second(0).millisecond(0);
-      }
-    }
-
-    if (parsedTime && parsedTime.isValid()) {
-      setFormData(prev => ({ ...prev, time: parsedTime, timeSelected: true }));
-    }
-  };
-
-  const handleSelectBarber = (barberId) => {
-    setFormData(prev => ({
-      ...prev,
-      barber: barberId,
-      time: null,
-      timeSelected: false
-    }));
-  };
-
-  if (!user || servicesLoading || services.length === 0) {
-    return null;
-  }
+  if (!user || servicesLoading || services.length === 0) return null;
 
   return (
     <Dialog
       open={open && showBooking !== false}
       onClose={(event, reason) => {
-        if (reason !== 'backdropClick') {
-          handleClose();
-        }
+        // ignore stray taps outside so nobody loses their progress
+        if (reason !== 'backdropClick') handleClose();
       }}
-      fullWidth
-      maxWidth="sm"
-      disableScrollLock={false}
+      maxWidth={false}
       aria-labelledby="booking-dialog-title"
-      sx={{ 
+      sx={{
         zIndex: 1200,
-        '& .MuiBackdrop-root': {
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(2px)',
-        }
+        // bottom sheet on phones (thumb reach), centred card on larger screens
+        '& .MuiDialog-container': { alignItems: { xs: 'flex-end', sm: 'center' } },
+        '& .MuiBackdrop-root': { backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' },
       }}
       PaperProps={{
         sx: {
-          borderRadius: '16px',
-          p: { xs: 2, sm: 3 },
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          m: 0,
+          width: { xs: '100%', sm: 460 },
+          maxHeight: { xs: '92vh', sm: '90vh' },
+          borderRadius: { xs: '20px 20px 0 0', sm: '16px' },
+          px: { xs: 2, sm: 3 },
+          pt: 1.5,
+          pb: { xs: 'calc(16px + env(safe-area-inset-bottom))', sm: 3 },
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
           overflow: 'hidden',
-        }
+          display: 'flex',
+          flexDirection: 'column',
+        },
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Step {activeStep + 1} of 3
-        </Typography>
-        <IconButton onClick={handleClose} size="small" sx={{ color: '#64748B' }}>
+      {/* Top bar: back, progress, close */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        <IconButton
+          onClick={() => setStep((s) => Math.max(0, s - 1))}
+          aria-label="Go back"
+          sx={{ color: INK, visibility: step === 0 ? 'hidden' : 'visible' }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
+
+        <Box
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={4}
+          aria-valuenow={step + 1}
+          aria-label={`Step ${step + 1} of 4`}
+          sx={{ flex: 1, display: 'flex', gap: 0.75 }}
+        >
+          {[0, 1, 2, 3].map((i) => (
+            <Box
+              key={i}
+              sx={{
+                flex: 1,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: i <= step ? GOLD : LINE,
+                transition: 'background-color .25s ease',
+              }}
+            />
+          ))}
+        </Box>
+
+        <IconButton onClick={handleClose} aria-label="Close" sx={{ color: MUTED }}>
           <CloseIcon />
         </IconButton>
       </Box>
 
-      <DialogContent 
-        sx={{ 
-          p: '0 !important', 
-          overflowY: 'auto !important',
-          overflowX: 'hidden !important',
+      <Typography
+        id="booking-dialog-title"
+        component="h2"
+        sx={{ fontSize: 24, fontWeight: 700, color: INK, mb: 2, lineHeight: 1.2 }}
+      >
+        {TITLES[step]}
+      </Typography>
+
+      <DialogContent
+        key={step}
+        sx={{
+          p: '0 !important',
+          overflowY: 'auto',
+          overflowX: 'hidden',
           scrollbarWidth: 'none',
-          '&::-webkit-scrollbar': { display: 'none' }
+          '&::-webkit-scrollbar': { display: 'none' },
+          animation: 'stepIn .2s ease-out',
+          '@keyframes stepIn': {
+            from: { opacity: 0, transform: 'translateX(14px)' },
+            to: { opacity: 1, transform: 'translateX(0)' },
+          },
+          '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
         }}
       >
-        {/* Step 0: Select Service */}
-        {activeStep === 0 && (
-          <Box>
-            <Typography sx={{ mb: 2, fontSize: { xs: '20px', sm: '22px' }, fontWeight: 700, color: '#1B263B' }}>
-              Select Service
-            </Typography>
+        {/* 1. Service: tap one, move on */}
+        {step === 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, pb: 0.5 }}>
+            {services.map((service) => (
+              <OptionRow
+                key={service._id}
+                selected={formData.service === service._id}
+                onClick={() => handleSelectService(service._id)}
+                icon={serviceIcon(service.serviceName)}
+                title={service.serviceName}
+                subtitle={`${service.duration} min`}
+                right={`Rs. ${service.price}`}
+              />
+            ))}
+          </Box>
+        )}
 
-            <Box 
-              sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, 
-                gap: 1.5, 
-                mb: 3 
-              }}
-            >
-              {services.map(service => (
-                <Box
-                  key={service._id}
-                  onClick={() => setFormData(prev => ({ ...prev, service: service._id }))}
-                  sx={{
-                    p: 2,
-                    border: '2px solid',
-                    borderColor: formData.service === service._id ? '#FFC300' : '#E2E8F0',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    backgroundColor: formData.service === service._id ? '#FFFDF4' : '#FFFFFF',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { borderColor: formData.service === service._id ? '#FFC300' : '#CBD5E1' }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box sx={{ p: 1, backgroundColor: '#F8FAFC', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {getServiceIcon(service.serviceName)}
-                    </Box>
-                    <Box>
-                      <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#1B263B', mb: 0.5 }}>
-                        {service.serviceName}
-                      </Typography>
-                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                        <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#1B263B' }}>
-                          Rs. {service.price}
-                        </Typography>
-                        <Chip
-                          icon={<AccessTimeIcon sx={{ fontSize: '12px !important' }} />}
-                          label={`${service.duration}m`}
-                          size="small"
-                          sx={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 600, fontSize: '11px', height: '20px' }}
-                        />
-                      </Box>
-                    </Box>
-                  </Box>
-                  {formData.service === service._id && (
-                    <CheckCircleIcon sx={{ color: '#D99B00', fontSize: '20px', ml: 1 }} />
-                  )}
-                </Box>
-              ))}
+        {/* 2. Barber: tap one, move on */}
+        {step === 1 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, pb: 0.5 }}>
+            {barbersLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress size={28} sx={{ color: GOLD }} />
+              </Box>
+            ) : barbers.length === 0 ? (
+              <Typography sx={{ fontSize: 15, color: MUTED, py: 2 }}>
+                No barbers are available right now. Please try again later.
+              </Typography>
+            ) : (
+              barbers.map((barber) => (
+                <OptionRow
+                  key={barber._id}
+                  selected={formData.barber === barber._id}
+                  onClick={() => handleSelectBarber(barber._id)}
+                  icon={
+                    <Avatar
+                      src={barber.avatar || barber.image}
+                      sx={{ width: 44, height: 44, bgcolor: '#F1F5F9', color: GOLD_DEEP }}
+                    >
+                      <PersonIcon />
+                    </Avatar>
+                  }
+                  title={barberName(barber)}
+                />
+              ))
+            )}
+          </Box>
+        )}
+
+        {/* 3. Time: only free times are shown, tap one, move on */}
+        {step === 2 && (
+          <TimeManager
+            key={formData.barber || 'no-barber'}
+            barberId={formData.barber}
+            serviceId={formData.service}
+            onTimeSelect={handleTimeSelect}
+            onlyAvailable
+          />
+        )}
+
+        {/* 4. Confirm: one summary, one big button */}
+        {step === 3 && selectedService && selectedBarber && formData.time && (
+          <Box>
+            <Box sx={{ borderTop: `1px solid ${LINE}` }}>
+              <SummaryRow label="Service" value={selectedService.serviceName} onChange={() => setStep(0)} />
+              <SummaryRow label="Barber" value={barberName(selectedBarber)} onChange={() => setStep(1)} />
+              <SummaryRow
+                label="Time"
+                value={`Today, ${formData.time.format('h:mm A')}`}
+                onChange={() => setStep(2)}
+              />
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', py: 2.5 }}>
+              <Typography sx={{ fontSize: 15, color: MUTED }}>
+                About {selectedService.duration} min
+              </Typography>
+              <Typography sx={{ fontSize: 26, fontWeight: 700, color: INK }}>
+                Rs. {selectedService.price}
+              </Typography>
             </Box>
 
             <Button
               fullWidth
               variant="contained"
-              onClick={() => setActiveStep(1)}
-              disabled={!formData.service}
-              sx={{ py: 1.25, fontSize: '15px', fontWeight: 600, backgroundColor: '#FFC300', color: '#1B263B', borderRadius: '8px', boxShadow: 'none', '&:hover': { backgroundColor: '#E6AF00' } }}
+              onClick={handleSubmit}
+              disabled={submitting}
+              startIcon={
+                submitting ? (
+                  <CircularProgress size={18} sx={{ color: INK }} />
+                ) : (
+                  <CheckCircleIcon />
+                )
+              }
+              sx={{
+                py: 1.75,
+                fontSize: 17,
+                fontWeight: 700,
+                textTransform: 'none',
+                backgroundColor: GOLD,
+                color: INK,
+                borderRadius: '12px',
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: '#E6AF00', boxShadow: 'none' },
+                '&.Mui-disabled': { backgroundColor: GOLD, color: INK, opacity: 0.7 },
+              }}
             >
-              Continue <ArrowForwardIcon sx={{ ml: 1, fontSize: '18px' }} />
+              {submitting ? 'Booking...' : 'Book now'}
             </Button>
-          </Box>
-        )}
-
-        {/* Step 1: Select Barber & Time */}
-        {activeStep === 1 && (
-          <Box>
-            <Typography sx={{ mb: 2, fontSize: { xs: '20px', sm: '22px' }, fontWeight: 700, color: '#1B263B' }}>
-              Select Barber & Time
-            </Typography>
-
-            <Box sx={{ mb: 3 }}>
-              <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#475569', mb: 1.5 }}>
-                Choose Your Barber
-              </Typography>
-
-              {barbersLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                  <CircularProgress size={24} sx={{ color: '#FFC300' }} />
-                </Box>
-              ) : barbers.length === 0 ? (
-                <Typography sx={{ fontSize: '13px', color: '#64748B' }}>No barbers available.</Typography>
-              ) : (
-                <Box 
-                  sx={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' }, 
-                    gap: 1.5 
-                  }}
-                >
-                  {barbers.map(barber => {
-                    const barberName = barber.name || `${barber.firstName || ''} ${barber.lastName || ''}`.trim() || 'Barber';
-                    const isSelected = formData.barber === barber._id;
-
-                    return (
-                      <Box
-                        key={barber._id}
-                        onClick={() => handleSelectBarber(barber._id)}
-                        sx={{
-                          p: 1.5,
-                          border: '2px solid',
-                          borderColor: isSelected ? '#FFC300' : '#E2E8F0',
-                          borderRadius: '10px',
-                          cursor: 'pointer',
-                          backgroundColor: isSelected ? '#FFFDF4' : '#FFFFFF',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          transition: 'all 0.15s ease',
-                          '&:hover': { borderColor: isSelected ? '#FFC300' : '#CBD5E1' }
-                        }}
-                      >
-                        <Avatar 
-                          src={barber.avatar || barber.image} 
-                          sx={{ width: 42, height: 42, mb: 1, bgcolor: '#F1F5F9', color: '#D99B00' }}
-                        >
-                          <PersonIcon />
-                        </Avatar>
-                        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#1B263B', lineHeight: 1.2 }}>
-                          {barberName}
-                        </Typography>
-                        {isSelected && (
-                          <CheckCircleIcon sx={{ color: '#D99B00', fontSize: '16px', mt: 0.5 }} />
-                        )}
-                      </Box>
-                    );
-                  })}
-                </Box>
-              )}
-            </Box>
-
-            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#475569', mb: 1.5 }}>
-              Choose Time Slot
-            </Typography>
-            <Box sx={{ mb: 3 }}>
-              <TimeManager 
-                key={formData.barber || 'no-barber'}
-                barberId={formData.barber} 
-                serviceId={formData.service}
-                onTimeSelect={handleTimeSelect} 
-              />
-            </Box>
-
-            <Stack spacing={1.5}>
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={() => setActiveStep(2)}
-                disabled={!formData.timeSelected || !formData.barber}
-                sx={{ py: 1.25, fontSize: '15px', fontWeight: 600, backgroundColor: '#FFC300', color: '#1B263B', borderRadius: '8px', boxShadow: 'none', '&:hover': { backgroundColor: '#E6AF00' } }}
-              >
-                Continue <ArrowForwardIcon sx={{ ml: 1, fontSize: '18px' }} />
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => setActiveStep(0)}
-                sx={{ py: 1.25, fontSize: '15px', fontWeight: 600, color: '#475569', borderColor: '#CBD5E1', borderRadius: '8px' }}
-              >
-                <ArrowBackIcon sx={{ mr: 1, fontSize: '18px' }} /> Back
-              </Button>
-            </Stack>
-          </Box>
-        )}
-
-        {/* Step 2: Confirm */}
-        {activeStep === 2 && selectedService && (
-          <Box>
-            <Typography sx={{ mb: 2, fontSize: { xs: '20px', sm: '22px' }, fontWeight: 700, color: '#1B263B' }}>
-              Confirm Booking
-            </Typography>
-
-            <Box sx={{ mb: 3, p: 2.5, backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-              <Stack spacing={2}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', mb: 0.5, textTransform: 'uppercase' }}>Service</Typography>
-                    <Typography sx={{ fontSize: '16px', fontWeight: 600, color: '#1B263B' }}>{selectedService.serviceName}</Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'right' }}>
-                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', mb: 0.5, textTransform: 'uppercase' }}>Selected Barber</Typography>
-                    <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#1B263B' }}>
-                      {selectedBarber ? (selectedBarber.name || `${selectedBarber.firstName || ''} ${selectedBarber.lastName || ''}`.trim()) : 'Any Barber'}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ height: '1px', backgroundColor: '#E2E8F0' }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', mb: 0.5, textTransform: 'uppercase' }}>Total Price</Typography>
-                    <Typography sx={{ fontSize: '20px', fontWeight: 700, color: '#1B263B' }}>Rs. {selectedService.price}</Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'right' }}>
-                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#64748B', mb: 0.5, textTransform: 'uppercase' }}>Duration & Time</Typography>
-                    <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#1B263B' }}>{selectedService.duration}m | {formData.time?.format('hh:mm A')}</Typography>
-                  </Box>
-                </Box>
-              </Stack>
-            </Box>
-
-            <Stack spacing={1.5}>
-              <Button
-                type="button"
-                fullWidth
-                variant="contained"
-                onClick={handleSubmit}
-                sx={{ py: 1.25, fontSize: '15px', fontWeight: 600, backgroundColor: '#FFC300', color: '#1B263B', borderRadius: '8px', boxShadow: 'none', '&:hover': { backgroundColor: '#E6AF00' } }}
-              >
-                Confirm Booking
-              </Button>
-              <Button
-                type="button"
-                fullWidth
-                variant="outlined"
-                onClick={() => setActiveStep(1)}
-                sx={{ py: 1.25, fontSize: '15px', fontWeight: 600, color: '#475569', borderColor: '#CBD5E1', borderRadius: '8px' }}
-              >
-                <ArrowBackIcon sx={{ mr: 1, fontSize: '18px' }} /> Back
-              </Button>
-            </Stack>
           </Box>
         )}
       </DialogContent>
