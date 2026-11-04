@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -15,6 +15,7 @@ import {
   Paper,
   Stack,
   TextField,
+  MenuItem,
   InputAdornment,
   alpha,
   useTheme,
@@ -33,6 +34,24 @@ import { RoleGuard } from "./RoleGuard.jsx";
 
 import { bookingData } from "../redux/features/bookingSlice.js";
 
+const MASTER_ROLE = "masterBarber";
+
+/* Barber filter values for the masterBarber:
+   "mine" = only my own bookings (default), "all" = every barber, or a barber id */
+const FILTER_MINE = "mine";
+const FILTER_ALL = "all";
+
+/* Works for a plain id or a populated object */
+const barberIdOf = (barberField) =>
+  String(
+    (typeof barberField === "object" && barberField
+      ? barberField._id || barberField.id
+      : barberField) || ""
+  );
+
+const barberLabel = (b) =>
+  b?.name || `${b?.firstName || ""} ${b?.lastName || ""}`.trim() || "";
+
 const WaitingList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -42,10 +61,17 @@ const WaitingList = () => {
   const bookings = useSelector((state) => state.booking?.bookings || []);
   const user = useSelector((state) => state.auth?.user);
 
+  const isMaster = user?.role === MASTER_ROLE;
+  const currentUserId = String(user?._id || user?.id || "");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [showOnlyMine, setShowOnlyMine] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
+
+  // masterBarber only: which barber's bookings to look at (starts on their own)
+  const [barberFilter, setBarberFilter] = useState(FILTER_MINE);
+  const [allBarbers, setAllBarbers] = useState([]);
 
   // Used only to resync after a status change
   const fetchBookings = useCallback(async () => {
@@ -59,6 +85,68 @@ const WaitingList = () => {
     }
   }, [dispatch]);
 
+  // masterBarber only: load the barber list once so the selector can show names
+  useEffect(() => {
+    if (!isMaster) return;
+    let isMounted = true;
+
+    const loadBarbers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get("/api/v1/barber/getAllBarbers", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (isMounted && res.data?.success) {
+          setAllBarbers(res.data.data || res.data.barbers || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch barbers:", err);
+      }
+    };
+
+    loadBarbers();
+    return () => {
+      isMounted = false;
+    };
+  }, [isMaster]);
+
+  /* barber id -> name (from the barber list, filled in from populated bookings if needed) */
+  const barberNames = useMemo(() => {
+    const map = new Map();
+    allBarbers.forEach((b) => {
+      const id = String(b._id || b.id || "");
+      if (id) map.set(id, barberLabel(b));
+    });
+    bookings.forEach((bk) => {
+      const id = barberIdOf(bk.barberId);
+      if (id && !map.get(id) && typeof bk.barberId === "object") {
+        map.set(id, barberLabel(bk.barberId));
+      }
+    });
+    return map;
+  }, [allBarbers, bookings]);
+
+  const getBarberName = useCallback(
+    (booking) => {
+      const id = barberIdOf(booking.barberId);
+      return barberNames.get(id) || (id ? `Barber ${id.slice(-4)}` : "—");
+    },
+    [barberNames]
+  );
+
+  /* options for the selector: everyone except me */
+  const barberOptions = useMemo(() => {
+    const ids = new Set(allBarbers.map((b) => String(b._id || b.id || "")));
+    bookings.forEach((bk) => ids.add(barberIdOf(bk.barberId)));
+    ids.delete("");
+    ids.delete(currentUserId);
+    return [...ids]
+      .map((id) => ({ id, name: barberNames.get(id) || `Barber ${id.slice(-4)}` }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allBarbers, bookings, barberNames, currentUserId]);
+
+  const showBarberCol = isMaster && barberFilter === FILTER_ALL;
+
   const getPublicUserId = (booking) => {
     if (booking?.userId?.publicId) {
       return String(booking.userId.publicId).toUpperCase();
@@ -70,20 +158,14 @@ const WaitingList = () => {
   const checkIsMyBooking = useCallback(
     (b) => {
       const bookingUserId = b.userId?._id || b.userId;
-      const currentUserId = user?._id || user?.id;
-      return Boolean(currentUserId && String(bookingUserId) === String(currentUserId));
+      return Boolean(currentUserId && String(bookingUserId) === currentUserId);
     },
-    [user]
+    [currentUserId]
   );
 
   const checkIsAssignedBarber = useCallback(
-    (b) => {
-      const barberField = b.barberId;
-      const bookingBarberId = typeof barberField === "object" ? (barberField?._id || barberField?.id) : barberField;
-      const currentUserId = user?._id || user?.id;
-      return Boolean(currentUserId && String(bookingBarberId) === String(currentUserId));
-    },
-    [user]
+    (b) => Boolean(currentUserId && barberIdOf(b.barberId) === currentUserId),
+    [currentUserId]
   );
 
   const filteredBookings = useMemo(() => {
@@ -97,8 +179,18 @@ const WaitingList = () => {
       return dayjs(b.bookingTime).isAfter(startOfToday) || dayjs(b.bookingTime).isSame(startOfToday, "day");
     });
 
+    // barber: only their own bookings
     if (user?.role === "barber") {
       list = list.filter(checkIsAssignedBarber);
+    }
+
+    // masterBarber: own bookings first, or the barber chosen in the selector
+    if (isMaster) {
+      if (barberFilter === FILTER_MINE) {
+        list = list.filter(checkIsAssignedBarber);
+      } else if (barberFilter !== FILTER_ALL) {
+        list = list.filter((b) => barberIdOf(b.barberId) === barberFilter);
+      }
     }
 
     if (showOnlyMine) list = list.filter(checkIsMyBooking);
@@ -112,13 +204,15 @@ const WaitingList = () => {
         const serviceName = b.service?.serviceName?.toLowerCase() || "";
         const status = (b.status || "pending").toLowerCase();
         const dateStr = b.bookingTime ? dayjs(b.bookingTime).format("DD MMM YYYY, hh:mm A").toLowerCase() : "";
+        const barberName = isMaster ? getBarberName(b).toLowerCase() : "";
 
         return (
           publicId.includes(query) ||
           userName.includes(query) ||
           serviceName.includes(query) ||
           status.includes(query) ||
-          dateStr.includes(query)
+          dateStr.includes(query) ||
+          barberName.includes(query)
         );
       });
     }
@@ -126,13 +220,30 @@ const WaitingList = () => {
     const statusPriority = { pending: 1, confirmed: 2, completed: 3, cancelled: 4 };
 
     return [...list].sort((a, b) => {
+      // "All barbers" view: group by barber name first
+      if (barberFilter === FILTER_ALL && isMaster) {
+        const byBarber = getBarberName(a).localeCompare(getBarberName(b));
+        if (byBarber !== 0) return byBarber;
+      }
+
       const pA = statusPriority[a.status?.toLowerCase()] || 5;
       const pB = statusPriority[b.status?.toLowerCase()] || 5;
 
       if (pA !== pB) return pA - pB;
       return new Date(a.bookingTime) - new Date(b.bookingTime);
     });
-  }, [bookings, searchTerm, showOnlyMine, showOnlyPending, checkIsMyBooking, checkIsAssignedBarber, user]);
+  }, [
+    bookings,
+    searchTerm,
+    showOnlyMine,
+    showOnlyPending,
+    checkIsMyBooking,
+    checkIsAssignedBarber,
+    user,
+    isMaster,
+    barberFilter,
+    getBarberName,
+  ]);
 
   const handleStatusChange = async (bookingId, status) => {
     try {
@@ -252,9 +363,31 @@ const WaitingList = () => {
           <Stack
             direction="row"
             spacing={1}
+            useFlexGap
+            flexWrap="wrap"
             alignItems="center"
             sx={{ width: { xs: "100%", sm: "auto" } }}
           >
+            {/* masterBarber only: pick whose bookings to see */}
+            {isMaster && (
+              <TextField
+                select
+                size="small"
+                value={barberFilter}
+                onChange={(e) => setBarberFilter(e.target.value)}
+                aria-label="Choose barber"
+                sx={{ width: { xs: "100%", sm: 190 } }}
+              >
+                <MenuItem value={FILTER_MINE}>My bookings</MenuItem>
+                <MenuItem value={FILTER_ALL}>All barbers</MenuItem>
+                {barberOptions.map((b) => (
+                  <MenuItem key={b.id} value={b.id}>
+                    {b.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+
             <TextField
               size="small"
               placeholder="Search..."
@@ -269,6 +402,7 @@ const WaitingList = () => {
               }}
               sx={{
                 flex: { xs: 1, sm: "none" },
+                minWidth: { xs: 120, sm: 0 },
                 width: { sm: 200 },
               }}
             />
@@ -336,6 +470,11 @@ const WaitingList = () => {
                         <Typography variant="caption" color="text.secondary">
                           {b.service?.serviceName || "Service"}
                         </Typography>
+                        {showBarberCol && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            Barber: {getBarberName(b)}
+                          </Typography>
+                        )}
                       </Box>
 
                       <Box textAlign="right">
@@ -404,6 +543,7 @@ const WaitingList = () => {
                     <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Service</TableCell>
+                    {showBarberCol && <TableCell sx={{ fontWeight: 600 }}>Barber</TableCell>}
                     <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
                     <TableCell sx={{ fontWeight: 600 }} align="center">Status</TableCell>
                     <RoleGuard allowedRoles={["admin", "barber", "masterBarber"]} userRole={user?.role}>
@@ -434,6 +574,10 @@ const WaitingList = () => {
                         <TableCell sx={{ fontSize: "13px" }}>
                           {b.service?.serviceName || "—"}
                         </TableCell>
+
+                        {showBarberCol && (
+                          <TableCell sx={{ fontSize: "13px" }}>{getBarberName(b)}</TableCell>
+                        )}
 
                         <TableCell>
                           {renderBookingTime(b.bookingTime)}
@@ -505,7 +649,9 @@ const WaitingList = () => {
         ) : (
           <Box sx={{ p: 4, textAlign: "center" }}>
             <Typography variant="body2" color="text.secondary">
-              No bookings found in the queue.
+              {isMaster && barberFilter === FILTER_MINE
+                ? "You have no bookings in the queue. Choose another barber above to see theirs."
+                : "No bookings found in the queue."}
             </Typography>
           </Box>
         )}
