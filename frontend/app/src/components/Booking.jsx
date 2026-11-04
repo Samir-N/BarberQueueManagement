@@ -54,7 +54,7 @@ const OptionRow = ({ selected, onClick, leading, title, subtitle, price }) => (
       gap: 2,
       justifyContent: 'flex-start',
       textAlign: 'left',
-      borderRadius: '16px',
+      borderRadius: 0,
       border: '2px solid',
       borderColor: selected ? GOLD : LINE,
       backgroundColor: selected ? GOLD : '#FFFFFF',
@@ -111,7 +111,7 @@ const SummaryRow = ({ label, value, onChange }) => (
           textTransform: 'none',
           color: INK,
           border: `2px solid ${LINE}`,
-          borderRadius: '12px',
+          borderRadius: 0,
           flexShrink: 0,
         }}
       >
@@ -274,7 +274,7 @@ const Booking = () => {
           width: { xs: '100%', sm: 480 },
           height: { xs: '100%', sm: 'auto' },
           maxHeight: { xs: '100%', sm: '90vh' },
-          borderRadius: { xs: 0, sm: '16px' },
+          borderRadius: 0,
           px: 2.5,
           pt: { xs: 'calc(12px + env(safe-area-inset-top))', sm: 2 },
           pb: { xs: 'calc(16px + env(safe-area-inset-bottom))', sm: 3 },
@@ -315,7 +315,7 @@ const Booking = () => {
             sx={{
               flex: 1,
               height: 6,
-              borderRadius: 3,
+              borderRadius: 0,
               backgroundColor: i <= step ? GOLD : LINE,
               transition: 'background-color .25s ease',
             }}
@@ -384,6 +384,7 @@ const Booking = () => {
                   onClick={() => handleSelectBarber(barber._id)}
                   leading={
                     <Avatar
+                      variant="square"
                       src={barber.avatar || barber.image}
                       sx={{ width: 56, height: 56, bgcolor: '#F1F5F9', color: INK }}
                     >
@@ -440,7 +441,7 @@ const Booking = () => {
             textTransform: 'none',
             backgroundColor: GOLD,
             color: INK,
-            borderRadius: '16px',
+            borderRadius: 0,
             boxShadow: 'none',
             '&:hover': { backgroundColor: '#E6AF00', boxShadow: 'none' },
             '&.Mui-disabled': { backgroundColor: GOLD, color: INK, opacity: 0.7 },

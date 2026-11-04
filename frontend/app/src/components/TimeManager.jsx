@@ -116,7 +116,7 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect, onlyAvailable = false 
         sx={{
           minHeight: onlyAvailable ? 60 : 48,
           px: 1,
-          borderRadius: onlyAvailable ? "14px" : "10px",
+          borderRadius: 0,
           fontSize: onlyAvailable ? "1.15rem" : "0.95rem",
           fontWeight: onlyAvailable ? 700 : isSelected ? 700 : 500,
           border: "2px solid",
@@ -158,7 +158,7 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect, onlyAvailable = false 
       return (
         <Box sx={gridSx}>
           {Array.from({ length: 9 }).map((_, i) => (
-            <Skeleton key={i} variant="rounded" height={60} />
+            <Skeleton key={i} variant="rectangular" height={60} />
           ))}
         </Box>
       );
@@ -197,7 +197,7 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect, onlyAvailable = false 
           {[3, 6].map((count, i) => (
             <Box key={i} sx={gridSx}>
               {Array.from({ length: count }).map((_, j) => (
-                <Skeleton key={j} variant="rounded" height={48} />
+                <Skeleton key={j} variant="rectangular" height={48} />
               ))}
             </Box>
           ))}
