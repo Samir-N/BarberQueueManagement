@@ -397,20 +397,19 @@ const Booking = () => {
             )}
           </Box>
         )}
-
-        {/* 3. Time */}
-        {step === 2 && (
-          <TimeManager
-  barberId={barberId}
-  serviceId={serviceId}
-  onTimeSelect={setTime}
-  onlyAvailable
-  onChooseBarber={() => {
-    setTime(null);
-    setBarberId(null); // or setStep(barberStep)
-  }}
-/>
-        )}
+{/* 3. Time */}
+{step === 2 && (
+  <TimeManager
+    barberId={formData.barber}
+    serviceId={formData.service}
+    onTimeSelect={handleTimeSelect}
+    onlyAvailable
+    onChooseBarber={() => {
+      setFormData((prev) => ({ ...prev, barber: '', time: null }));
+      setStep(1);
+    }}
+  />
+)}
 
         {/* 4. Confirm */}
         {onConfirm && (
