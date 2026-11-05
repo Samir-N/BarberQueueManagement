@@ -4,9 +4,7 @@ import dayjs from "dayjs";
 import axios from "axios";
 
 const MORNING_SLOTS = ["8:00 AM"];
-const EVENING_SLOTS = [
-  "2:00 PM",
-];
+const EVENING_SLOTS = ["2:00 PM"];
 const ALL_SLOTS = [...MORNING_SLOTS, ...EVENING_SLOTS];
 
 const getSlotDayjs = (timeString) => {
@@ -23,8 +21,18 @@ const getSlotDayjs = (timeString) => {
  * onlyAvailable (default false):
  *   false -> original layout: Morning / Afternoon groups, unavailable slots greyed out, legend.
  *   true  -> simple layout for the booking flow: one grid with ONLY the free times.
+ *
+ * onChooseBarber (optional):
+ *   called when the user taps "Choose another barber" in the fully-booked state.
+ *   If not passed, the button is simply not rendered.
  */
-const TimeManager = ({ barberId, serviceId, onTimeSelect, onlyAvailable = false }) => {
+const TimeManager = ({
+  barberId,
+  serviceId,
+  onTimeSelect,
+  onlyAvailable = false,
+  onChooseBarber,
+}) => {
   const [selectedTime, setSelectedTime] = useState(null);
   const [bookedSlots, setBookedSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -167,9 +175,31 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect, onlyAvailable = false 
 
     if (freeSlots.length === 0) {
       return (
-        <Typography sx={{ fontSize: 18, color: "#475569", py: 2 }}>
-          No times left today for this barber. Go back and pick another barber.
-        </Typography>
+        <Box sx={{ py: 2, textAlign: "center" }}>
+          <Typography sx={{ fontSize: 18, color: "#475569", mb: 2 }}>
+            This barber is fully booked for today.
+          </Typography>
+          {onChooseBarber && (
+            <Button
+              onClick={onChooseBarber}
+              variant="contained"
+              sx={{
+                minHeight: 52,
+                px: 4,
+                borderRadius: 0,
+                bgcolor: "#FFC300",
+                color: "#1B263B",
+                fontWeight: 700,
+                fontSize: "1rem",
+                textTransform: "none",
+                boxShadow: "none",
+                "&:hover": { bgcolor: "#E6B000", boxShadow: "none" },
+              }}
+            >
+              Choose another barber
+            </Button>
+          )}
+        </Box>
       );
     }
 
@@ -177,6 +207,8 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect, onlyAvailable = false 
   }
 
   /* ---------- original mode ---------- */
+  const allTaken = !noBarber && ALL_SLOTS.every((t) => !isAvailable(t));
+
   return (
     <Box sx={{ mb: 2 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mb: 1.5 }}>
@@ -203,6 +235,21 @@ const TimeManager = ({ barberId, serviceId, onTimeSelect, onlyAvailable = false 
         </Box>
       ) : (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {allTaken && !error && onChooseBarber && (
+            <Box sx={{ textAlign: "center" }}>
+              <Typography sx={{ fontSize: "14px", color: "#475569", mb: 1 }}>
+                Fully booked today.
+              </Typography>
+              <Button
+                onClick={onChooseBarber}
+                size="small"
+                sx={{ textTransform: "none", color: "#1B263B", fontWeight: 600 }}
+              >
+                Choose another barber
+              </Button>
+            </Box>
+          )}
+
           <Box>
             <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, mb: 0.75 }}>
               Morning

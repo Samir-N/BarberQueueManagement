@@ -401,12 +401,15 @@ const Booking = () => {
         {/* 3. Time */}
         {step === 2 && (
           <TimeManager
-            key={formData.barber || 'no-barber'}
-            barberId={formData.barber}
-            serviceId={formData.service}
-            onTimeSelect={handleTimeSelect}
-            onlyAvailable
-          />
+  barberId={barberId}
+  serviceId={serviceId}
+  onTimeSelect={setTime}
+  onlyAvailable
+  onChooseBarber={() => {
+    setTime(null);
+    setBarberId(null); // or setStep(barberStep)
+  }}
+/>
         )}
 
         {/* 4. Confirm */}
